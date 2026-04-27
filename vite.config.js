@@ -8,7 +8,7 @@ export default defineConfig({
     host: '0.0.0.0',
     port: process.env.PORT || 4173,
     strictPort: true,
-    allowedHosts: ['all'],
+    allowedHosts: ['all','gig-master-frontend-6fdd9d2dc63c.herokuapp.com'],
   },
   test: {
     environment: 'jsdom',
