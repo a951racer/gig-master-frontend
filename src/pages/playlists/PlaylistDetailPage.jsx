@@ -142,8 +142,6 @@ export default function PlaylistDetailPage() {
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex gap-4 items-start">
-          <SongCatalogPanel excludeIds={playlistSongIds} droppable />
-
           <PlaylistDropZone isEmpty={playlistSongs.length === 0}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-300">Set List</h3>
@@ -155,6 +153,8 @@ export default function PlaylistDetailPage() {
               ))}
             </SortableContext>
           </PlaylistDropZone>
+
+          <SongCatalogPanel excludeIds={playlistSongIds} droppable />
         </div>
 
         <DragOverlay>
