@@ -26,7 +26,10 @@ export default function AppRouter() {
     <BrowserRouter>
       <AuthProvider>
         <NavBar />
-        <div className="min-h-screen bg-[#16132a] text-gray-100">
+        <div
+          className="min-h-screen bg-[#16132a] text-gray-100 bg-cover bg-center bg-no-repeat bg-fixed relative"
+          style={{ backgroundImage: "linear-gradient(rgba(22, 19, 42, 0.7), rgba(22, 19, 42, 0.7)), url('/images/app-bg.png')" }}
+        >
           <Suspense fallback={<div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>}>
             <Routes>
             {/* Public routes */}
