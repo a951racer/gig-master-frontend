@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createSong, getSong, updateSong } from '../../api/songs'
 import { listGenres } from '../../api/genres'
+import { useBand } from '../../auth/BandContext'
 
 const MUSICAL_KEYS = [
   '', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F',
@@ -17,6 +18,7 @@ export default function SongFormPage() {
   const { id } = useParams()
   const navigate = useNavigate()
   const isEdit = Boolean(id)
+  const { currentBand } = useBand()
   const [genres, setGenres] = useState([])
   const [form, setForm] = useState({ title: '', artist: '', genre: '', tags: '', originalKey: '', performedKey: '' })
   const [error, setError] = useState('')
@@ -24,6 +26,9 @@ export default function SongFormPage() {
 
   useEffect(() => {
     listGenres().then(res => setGenres(res.data)).catch(() => {})
+  }, [currentBand?.id])
+
+  useEffect(() => {
     if (isEdit) {
       getSong(id).then(res => {
         const s = res.data

@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useDraggable, useDroppable } from '@dnd-kit/core'
 import { listSongs } from '../api/songs'
 import { listGenres } from '../api/genres'
+import { useBand } from '../auth/BandContext'
 
 const inputCls = 'bg-[#16132a] border border-purple-800/40 rounded-lg px-2.5 py-1.5 text-white placeholder-gray-500 focus:outline-none focus:ring-1 focus:ring-purple-600 text-xs w-full'
 const selectCls = inputCls
@@ -27,6 +28,7 @@ function DraggableSongCard({ song }) {
 
 export default function SongCatalogPanel({ excludeIds = [], droppable = false }) {
   const { setNodeRef: setCatalogDropRef, isOver } = useDroppable({ id: 'catalog-drop-zone', disabled: !droppable })
+  const { currentBand } = useBand()
   const [songs, setSongs] = useState([])
   const [genres, setGenres] = useState([])
   const [titleFilter, setTitleFilter] = useState('')
@@ -35,7 +37,7 @@ export default function SongCatalogPanel({ excludeIds = [], droppable = false })
   const [sortField, setSortField] = useState('title')
   const [sortDir, setSortDir] = useState('asc')
 
-  useEffect(() => { listGenres().then(res => setGenres(res.data)).catch(() => {}) }, [])
+  useEffect(() => { listGenres().then(res => setGenres(res.data)).catch(() => {}) }, [currentBand?.id])
 
   useEffect(() => {
     const params = {}
