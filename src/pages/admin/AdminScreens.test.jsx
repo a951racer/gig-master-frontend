@@ -8,9 +8,11 @@ vi.mock('../../api/admin', () => ({
   listUsers: vi.fn(),
   createUser: vi.fn(),
   setUserRole: vi.fn(),
+  listBands: vi.fn(),
   createBand: vi.fn(),
   addBandMember: vi.fn(),
   setBandAdministrator: vi.fn(),
+  renameBand: vi.fn(),
   getSeedGenres: vi.fn(),
   updateSeedGenres: vi.fn(),
 }))
@@ -29,9 +31,11 @@ import {
   listUsers,
   createUser,
   setUserRole,
+  listBands,
   createBand,
   addBandMember,
   setBandAdministrator,
+  renameBand,
   getSeedGenres,
   updateSeedGenres,
 } from '../../api/admin'
@@ -42,6 +46,7 @@ beforeEach(() => {
   vi.clearAllMocks()
   mockRole = undefined
   listUsers.mockResolvedValue({ data: [] })
+  listBands.mockResolvedValue({ data: [] })
 })
 
 // Req 18.4, 18.5: every sysadmin screen is gated on role === 'system_administrator'.
@@ -63,6 +68,9 @@ describe('Sysadmin screen visibility gating (Req 18.4, 18.5)', () => {
 
     expect(screen.getByText(/not authorized to manage bands/i)).toBeInTheDocument()
     expect(screen.queryByRole('button', { name: /create band/i })).not.toBeInTheDocument()
+    // The load effect must not fire the admin APIs when unauthorized.
+    expect(listBands).not.toHaveBeenCalled()
+    expect(listUsers).not.toHaveBeenCalled()
     expect(createBand).not.toHaveBeenCalled()
     expect(addBandMember).not.toHaveBeenCalled()
     expect(setBandAdministrator).not.toHaveBeenCalled()
@@ -152,23 +160,41 @@ describe('UserListPage as system_administrator (Req 18.1)', () => {
 describe('BandAdminListPage as system_administrator (Req 18.2)', () => {
   beforeEach(() => {
     mockRole = 'system_administrator'
+    // The dropdowns are populated from listUsers() and listBands().
+    listUsers.mockResolvedValue({
+      data: [
+        { id: 'u-1', email: 'admin@band.com', role: 'user' },
+        { id: 'u-2', email: 'member@band.com', role: 'user' },
+      ],
+    })
+    listBands.mockResolvedValue({
+      data: [
+        { id: 'b-1', name: 'The Night Owls' },
+        { id: 'b-2', name: 'Second Band' },
+      ],
+    })
   })
 
   it('submitting the create-band form calls createBand({ name, administrator })', async () => {
     const user = userEvent.setup()
-    createBand.mockResolvedValueOnce({ data: { id: 'b-1', name: 'The Night Owls' } })
+    createBand.mockResolvedValueOnce({ data: { id: 'b-3', name: 'The Night Owls' } })
 
     renderWithRouter(<BandAdminListPage />)
 
-    await user.type(screen.getByPlaceholderText(/band name/i), 'The Night Owls')
-    await user.type(screen.getByPlaceholderText(/administrator user id/i), 'admin-1')
+    await user.type(screen.getByPlaceholderText(/^band name$/i), 'The Night Owls')
+    // The administrator field is now a user-email dropdown; select by option value (id).
+    const adminSelect = await screen.findByLabelText('Create band administrator')
+    await waitFor(() =>
+      expect(within(adminSelect).getByText('admin@band.com')).toBeInTheDocument()
+    )
+    await user.selectOptions(adminSelect, 'u-1')
 
     await user.click(screen.getByRole('button', { name: /create band/i }))
 
     await waitFor(() => {
       expect(createBand).toHaveBeenCalledWith({
         name: 'The Night Owls',
-        administrator: 'admin-1',
+        administrator: 'u-1',
       })
     })
   })
@@ -179,16 +205,19 @@ describe('BandAdminListPage as system_administrator (Req 18.2)', () => {
 
     renderWithRouter(<BandAdminListPage />)
 
-    // The add-member section is the first pair of Band ID / User ID inputs.
-    const bandIds = screen.getAllByPlaceholderText(/band id/i)
-    const userIds = screen.getAllByPlaceholderText(/^user id$/i)
-    await user.type(bandIds[0], 'band-7')
-    await user.type(userIds[0], 'user-7')
+    const bandSelect = await screen.findByLabelText('Add member band')
+    await waitFor(() =>
+      expect(within(bandSelect).getByText('The Night Owls')).toBeInTheDocument()
+    )
+    await user.selectOptions(bandSelect, 'b-1')
+
+    const userSelect = await screen.findByLabelText('Add member user')
+    await user.selectOptions(userSelect, 'u-2')
 
     await user.click(screen.getByRole('button', { name: /add member/i }))
 
     await waitFor(() => {
-      expect(addBandMember).toHaveBeenCalledWith('band-7', 'user-7')
+      expect(addBandMember).toHaveBeenCalledWith('b-1', 'u-2')
     })
   })
 
@@ -198,16 +227,40 @@ describe('BandAdminListPage as system_administrator (Req 18.2)', () => {
 
     renderWithRouter(<BandAdminListPage />)
 
-    // The set-administrator section is the second pair of Band ID / User ID inputs.
-    const bandIds = screen.getAllByPlaceholderText(/band id/i)
-    const userIds = screen.getAllByPlaceholderText(/^user id$/i)
-    await user.type(bandIds[1], 'band-9')
-    await user.type(userIds[1], 'user-9')
+    const bandSelect = await screen.findByLabelText('Set administrator band')
+    await waitFor(() =>
+      expect(within(bandSelect).getByText('Second Band')).toBeInTheDocument()
+    )
+    await user.selectOptions(bandSelect, 'b-2')
+
+    const userSelect = await screen.findByLabelText('Set administrator user')
+    await user.selectOptions(userSelect, 'u-1')
 
     await user.click(screen.getByRole('button', { name: /set administrator/i }))
 
     await waitFor(() => {
-      expect(setBandAdministrator).toHaveBeenCalledWith('band-9', 'user-9')
+      expect(setBandAdministrator).toHaveBeenCalledWith('b-2', 'u-1')
+    })
+  })
+
+  it('submitting the rename-band form calls renameBand(bandId, name)', async () => {
+    const user = userEvent.setup()
+    renameBand.mockResolvedValueOnce({ data: {} })
+
+    renderWithRouter(<BandAdminListPage />)
+
+    const bandSelect = await screen.findByLabelText('Rename band')
+    await waitFor(() =>
+      expect(within(bandSelect).getByText('The Night Owls')).toBeInTheDocument()
+    )
+    await user.selectOptions(bandSelect, 'b-1')
+
+    await user.type(screen.getByPlaceholderText(/new band name/i), 'Renamed Owls')
+
+    await user.click(screen.getByRole('button', { name: /save/i }))
+
+    await waitFor(() => {
+      expect(renameBand).toHaveBeenCalledWith('b-1', 'Renamed Owls')
     })
   })
 })
