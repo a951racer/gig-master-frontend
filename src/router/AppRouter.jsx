@@ -32,7 +32,6 @@ const BandGenreEditorPage = lazy(() => import('../pages/band-admin/BandGenreEdit
 
 // Sysadmin pages (self-gate on role === 'system_administrator')
 const AdminPage = lazy(() => import('../pages/admin/AdminPage'))
-const GenreListPage = lazy(() => import('../pages/admin/genres/GenreListPage'))
 const UserListPage = lazy(() => import('../pages/admin/users/UserListPage'))
 const BandAdminListPage = lazy(() => import('../pages/admin/bands/BandAdminListPage'))
 const SeedGenreListPage = lazy(() => import('../pages/admin/seed-genres/SeedGenreListPage'))
@@ -87,7 +86,6 @@ export default function AppRouter() {
               {/* Sysadmin routes (pages self-gate on role) */}
               <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>}>
                 <Route index element={<UserListPage />} />
-                <Route path="genres" element={<GenreListPage />} />
                 <Route path="users" element={<UserListPage />} />
                 <Route path="bands" element={<BandAdminListPage />} />
                 <Route path="seed-genres" element={<SeedGenreListPage />} />
