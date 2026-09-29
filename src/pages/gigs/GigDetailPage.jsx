@@ -1,19 +1,22 @@
 import { useState, useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getGig } from '../../api/gigs'
+import { useBand } from '../../auth/BandContext'
 
 export default function GigDetailPage() {
   const { id } = useParams()
+  const { currentBand } = useBand()
   const [gig, setGig] = useState(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
   useEffect(() => {
+    setLoading(true)
     getGig(id)
       .then(res => setGig(res.data))
       .catch(() => setError('Failed to load gig'))
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id, currentBand?.id])
 
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>
   if (error) return <p role="alert" className="text-red-400 text-center py-16">{error}</p>

@@ -2,20 +2,25 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { listPlaylists, deletePlaylist } from '../../api/playlists'
 import ConfirmDialog from '../../components/ConfirmDialog'
+import { useBand } from '../../auth/BandContext'
+import NoBandPrompt from '../bands/NoBandPrompt'
 
 export default function PlaylistListPage() {
   const navigate = useNavigate()
+  const { currentBand, hasNoBand } = useBand()
   const [playlists, setPlaylists] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   useEffect(() => {
+    if (hasNoBand) return
+    setLoading(true)
     listPlaylists()
       .then(res => setPlaylists(res.data))
       .catch(() => setError('Failed to load playlists'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [hasNoBand, currentBand?.id])
 
   const handleDelete = async (playlist) => {
     try {
@@ -23,6 +28,14 @@ export default function PlaylistListPage() {
       setPlaylists(prev => prev.filter(p => p._id !== playlist._id))
     } catch { setError('Failed to delete playlist') }
     finally { setConfirmDelete(null) }
+  }
+
+  if (hasNoBand) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <NoBandPrompt />
+      </div>
+    )
   }
 
   return (

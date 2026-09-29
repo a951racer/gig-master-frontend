@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { createGig, getGig, updateGig } from '../../api/gigs'
 import { listPlaylists } from '../../api/playlists'
+import { useBand } from '../../auth/BandContext'
 
 const inputCls = 'w-full bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
 const labelCls = 'block text-sm font-medium text-gray-300 mb-1.5'
@@ -10,6 +11,7 @@ export default function GigFormPage() {
   const navigate = useNavigate()
   const { id } = useParams()
   const isEdit = Boolean(id)
+  const { currentBand } = useBand()
   const [form, setForm] = useState({ name: '', description: '', location: '', date: '', playlist: '' })
   const [playlists, setPlaylists] = useState([])
   const [error, setError] = useState('')
@@ -17,7 +19,7 @@ export default function GigFormPage() {
 
   useEffect(() => {
     listPlaylists().then(res => setPlaylists(res.data)).catch(() => {})
-  }, [])
+  }, [currentBand?.id])
 
   useEffect(() => {
     if (isEdit) {
@@ -31,7 +33,7 @@ export default function GigFormPage() {
         })
       }).catch(() => setError('Failed to load gig'))
     }
-  }, [id, isEdit])
+  }, [id, isEdit, currentBand?.id])
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(''); setLoading(true)

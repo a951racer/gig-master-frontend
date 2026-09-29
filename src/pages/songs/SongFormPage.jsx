@@ -35,7 +35,7 @@ export default function SongFormPage() {
         setForm({ title: s.title || '', artist: s.artist || '', genre: s.genre?._id || '', tags: s.tags?.join(', ') || '', originalKey: s.originalKey || '', performedKey: s.performedKey || '' })
       }).catch(() => setError('Failed to load song'))
     }
-  }, [id, isEdit])
+  }, [id, isEdit, currentBand?.id])
 
   const handleChange = (e) => setForm(prev => ({ ...prev, [e.target.name]: e.target.value }))
 

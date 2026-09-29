@@ -2,20 +2,25 @@ import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { listGigs, deleteGig } from '../../api/gigs'
 import ConfirmDialog from '../../components/ConfirmDialog'
+import { useBand } from '../../auth/BandContext'
+import NoBandPrompt from '../bands/NoBandPrompt'
 
 export default function GigListPage() {
   const navigate = useNavigate()
+  const { currentBand, hasNoBand } = useBand()
   const [gigs, setGigs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   useEffect(() => {
+    if (hasNoBand) return
+    setLoading(true)
     listGigs()
       .then(res => setGigs(res.data))
       .catch(() => setError('Failed to load gigs'))
       .finally(() => setLoading(false))
-  }, [])
+  }, [hasNoBand, currentBand?.id])
 
   const handleDelete = async (gig) => {
     try {
@@ -23,6 +28,14 @@ export default function GigListPage() {
       setGigs(prev => prev.filter(g => g._id !== gig._id))
     } catch { setError('Failed to delete gig') }
     finally { setConfirmDelete(null) }
+  }
+
+  if (hasNoBand) {
+    return (
+      <div className="max-w-4xl mx-auto px-6 py-8">
+        <NoBandPrompt />
+      </div>
+    )
   }
 
   return (

@@ -3,12 +3,15 @@ import { Link, useNavigate } from 'react-router-dom'
 import { listSongs, deleteSong } from '../../api/songs'
 import { listGenres } from '../../api/genres'
 import ConfirmDialog from '../../components/ConfirmDialog'
+import { useBand } from '../../auth/BandContext'
+import NoBandPrompt from '../bands/NoBandPrompt'
 
 const inputCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
 const selectCls = inputCls
 
 export default function SongListPage() {
   const navigate = useNavigate()
+  const { currentBand, hasNoBand } = useBand()
   const [songs, setSongs] = useState([])
   const [genres, setGenres] = useState([])
   const [loading, setLoading] = useState(true)
@@ -21,10 +24,12 @@ export default function SongListPage() {
   const [confirmDelete, setConfirmDelete] = useState(null)
 
   useEffect(() => {
+    if (hasNoBand) return
     listGenres().then(res => setGenres(res.data)).catch(() => {})
-  }, [])
+  }, [hasNoBand, currentBand?.id])
 
   useEffect(() => {
+    if (hasNoBand) return
     setLoading(true)
     const params = {}
     if (titleFilter) params.title = titleFilter
@@ -41,7 +46,7 @@ export default function SongListPage() {
       })
       .catch(() => setError('Failed to load songs'))
       .finally(() => setLoading(false))
-  }, [titleFilter, genreFilter, tagsFilter, sortField, sortDir])
+  }, [titleFilter, genreFilter, tagsFilter, sortField, sortDir, hasNoBand, currentBand?.id])
 
   const handleDelete = async (song) => {
     try {
@@ -49,6 +54,14 @@ export default function SongListPage() {
       setSongs(prev => prev.filter(s => s._id !== song._id))
     } catch { setError('Failed to delete song') }
     finally { setConfirmDelete(null) }
+  }
+
+  if (hasNoBand) {
+    return (
+      <div className="max-w-6xl mx-auto px-6 py-8">
+        <NoBandPrompt />
+      </div>
+    )
   }
 
   return (
