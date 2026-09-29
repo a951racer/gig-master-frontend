@@ -16,9 +16,6 @@ export default function AdminPage() {
     <div className="max-w-xl mx-auto px-6 py-8">
       <h1 className="text-2xl font-bold text-white mb-6">Admin</h1>
       <nav className="flex flex-wrap gap-2 mb-6">
-        <NavLink to="/admin/genres" className={linkCls}>
-          Genres
-        </NavLink>
         {/* Sysadmin-only links, gated on the decoded token role (Req 18.4/18.5). */}
         {isSysAdmin && (
           <>
