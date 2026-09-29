@@ -1,5 +1,10 @@
+import { useState } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
 import { useBand } from '../../auth/BandContext'
+import { renameBand } from '../../api/bands'
+import { refreshMembershipAndGo } from '../bands/refreshMembership'
+
+const inputCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
 
 // Band-administrator layout. Renders the sub-page nav + Outlet only when the
 // current band is one the user administers (Req 17.3, 17.4). Otherwise it shows
@@ -42,7 +47,71 @@ export default function BandAdminPage() {
           Genres
         </NavLink>
       </nav>
+
+      <BandSettings currentBand={currentBand} />
+
       <Outlet />
     </div>
+  )
+}
+
+// "Band settings" section — lets a band admin rename the current band. Because
+// the band name is embedded in the JWT bands[] claim, on success we refresh the
+// session (refreshMembershipAndGo) so the NavBar switcher shows the new name.
+function BandSettings({ currentBand }) {
+  const [name, setName] = useState(currentBand.name)
+  const [error, setError] = useState(null)
+  const [saving, setSaving] = useState(false)
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError(null)
+    const trimmed = name.trim()
+    if (!trimmed) {
+      setError('Band name is required.')
+      return
+    }
+    setSaving(true)
+    try {
+      await renameBand(currentBand.id, trimmed)
+      // Refresh the token so bands[] carries the new name, then full-page
+      // navigate back to band-admin with this band re-selected.
+      await refreshMembershipAndGo('/band-admin', { selectBandId: currentBand.id })
+    } catch (err) {
+      setSaving(false)
+      setError(
+        err?.response?.data?.error?.message ||
+          err?.response?.data?.message ||
+          'Failed to rename band.'
+      )
+    }
+  }
+
+  return (
+    <section className="mb-8">
+      <h2 className="text-lg font-semibold text-white mb-3">Band settings</h2>
+      <form onSubmit={handleSubmit} className="flex gap-2">
+        <input
+          type="text"
+          aria-label="Band name"
+          placeholder="Band name"
+          value={name}
+          onChange={e => setName(e.target.value)}
+          className={inputCls + ' flex-1'}
+        />
+        <button
+          type="submit"
+          disabled={saving}
+          className="bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors whitespace-nowrap"
+        >
+          Save
+        </button>
+      </form>
+      {error && (
+        <p role="alert" className="text-red-400 text-sm mt-2">
+          {error}
+        </p>
+      )}
+    </section>
   )
 }

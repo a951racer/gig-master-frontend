@@ -27,3 +27,7 @@ export const resolveJoinRequest = (bandId, reqId, status) =>
 // Caller's own join-request statuses — GET /me/join-requests → 200 [{ band, status }]
 export const listMyJoinRequests = () =>
   api.get('/me/join-requests')
+
+// Rename a band (band-admin or sysadmin) — PATCH /bands/:id { name } → 200 { id, name }
+export const renameBand = (bandId, name) =>
+  api.patch(`/bands/${bandId}`, { name })

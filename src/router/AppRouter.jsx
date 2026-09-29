@@ -86,6 +86,7 @@ export default function AppRouter() {
 
               {/* Sysadmin routes (pages self-gate on role) */}
               <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>}>
+                <Route index element={<UserListPage />} />
                 <Route path="genres" element={<GenreListPage />} />
                 <Route path="users" element={<UserListPage />} />
                 <Route path="bands" element={<BandAdminListPage />} />
