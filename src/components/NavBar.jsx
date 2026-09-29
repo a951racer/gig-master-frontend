@@ -12,7 +12,7 @@ const memberLinks = [
 ]
 
 export default function NavBar() {
-  const { user, logout } = useAuth()
+  const { user, token, logout } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
 
@@ -21,7 +21,10 @@ export default function NavBar() {
   const { bands = [], role, currentBand, setCurrentBand, hasNoBand = true } =
     useBand() || {}
 
-  if (!user) return null
+  // Hide the nav for unauthenticated users. Gate on `token` (the same
+  // auth-validity signal ProtectedRoute uses) so the nav never shows on public
+  // routes or when the session is invalid, even if a stale `user` lingers.
+  if (!token || !user) return null
 
   const handleLogout = async () => {
     await logout()

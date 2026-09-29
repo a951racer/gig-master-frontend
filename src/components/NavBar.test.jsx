@@ -45,13 +45,20 @@ function renderNavBar() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(useAuth).mockReturnValue({ user: defaultUser, logout: vi.fn() })
+  vi.mocked(useAuth).mockReturnValue({ user: defaultUser, token: 'valid.jwt.token', logout: vi.fn() })
   setBand()
 })
 
 describe('NavBar', () => {
   it('renders nothing when there is no authenticated user', () => {
-    vi.mocked(useAuth).mockReturnValue({ user: null, logout: vi.fn() })
+    vi.mocked(useAuth).mockReturnValue({ user: null, token: null, logout: vi.fn() })
+    const { container } = renderNavBar()
+    expect(container).toBeEmptyDOMElement()
+  })
+
+  it('renders nothing when there is no valid token (session invalid)', () => {
+    // Even if a stale user object lingers, no token means the nav is hidden.
+    vi.mocked(useAuth).mockReturnValue({ user: defaultUser, token: null, logout: vi.fn() })
     const { container } = renderNavBar()
     expect(container).toBeEmptyDOMElement()
   })
