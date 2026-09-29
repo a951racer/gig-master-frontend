@@ -1,9 +1,9 @@
 import { useEffect, useState, useCallback } from 'react'
 import { listUsers, createUser, setUserRole } from '../../../api/admin'
 import { useBand } from '../../../auth/BandContext'
+import { ROLE_OPTIONS } from '../../../constants/roles'
 
 const inputCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
-const ROLES = ['user', 'system_administrator']
 
 function errMsg(err, fallback) {
   return err?.response?.data?.error?.message || err?.response?.data?.message || fallback
@@ -108,7 +108,7 @@ export default function UserListPage() {
             className={inputCls}
           />
           <select value={newRole} onChange={e => setNewRole(e.target.value)} className={inputCls}>
-            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
           <button type="submit" className="bg-purple-700 hover:bg-purple-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors self-start">
             Create User
@@ -135,7 +135,7 @@ export default function UserListPage() {
             })}
           </select>
           <select value={assignRole} onChange={e => setAssignRole(e.target.value)} className={inputCls}>
-            {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
+            {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
           <button type="submit" className="bg-purple-700 hover:bg-purple-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors self-start">
             Assign Role
