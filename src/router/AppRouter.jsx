@@ -1,5 +1,5 @@
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { AuthProvider } from '../auth/AuthContext'
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom'
+import { AuthProvider, useAuth } from '../auth/AuthContext'
 import { BandProvider } from '../auth/BandContext'
 import ProtectedRoute from './ProtectedRoute'
 import NavBar from '../components/NavBar'
@@ -35,6 +35,18 @@ const AdminPage = lazy(() => import('../pages/admin/AdminPage'))
 const UserListPage = lazy(() => import('../pages/admin/users/UserListPage'))
 const BandAdminListPage = lazy(() => import('../pages/admin/bands/BandAdminListPage'))
 const SeedGenreListPage = lazy(() => import('../pages/admin/seed-genres/SeedGenreListPage'))
+
+// Auth-aware fallback for unknown routes. Authenticated users go to the app
+// home (/songs); everyone else goes to /login. Redirects rather than rendering
+// the login form inline (which previously left the NavBar visible on dead
+// routes like the removed /admin/genres).
+function RootRedirect() {
+  const { token, isLoading } = useAuth()
+  if (isLoading) {
+    return <div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>
+  }
+  return <Navigate to={token ? '/songs' : '/login'} replace />
+}
 
 export default function AppRouter() {
   return (
@@ -92,7 +104,7 @@ export default function AppRouter() {
               </Route>
 
               {/* Default redirect */}
-              <Route path="*" element={<LoginPage />} />
+              <Route path="*" element={<RootRedirect />} />
             </Routes>
             </Suspense>
           </div>
