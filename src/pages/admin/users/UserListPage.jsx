@@ -1,5 +1,5 @@
-import { useState } from 'react'
-import { createUser, setUserRole } from '../../../api/admin'
+import { useEffect, useState, useCallback } from 'react'
+import { listUsers, createUser, setUserRole } from '../../../api/admin'
 import { useBand } from '../../../auth/BandContext'
 
 const inputCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
@@ -11,6 +11,9 @@ function errMsg(err, fallback) {
 
 export default function UserListPage() {
   const { role } = useBand()
+  const isSysAdmin = role === 'system_administrator'
+
+  const [users, setUsers] = useState([])
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -23,9 +26,24 @@ export default function UserListPage() {
   const [roleError, setRoleError] = useState(null)
   const [roleSuccess, setRoleSuccess] = useState(null)
 
+  const fetchUsers = useCallback(async () => {
+    if (!isSysAdmin) return
+    try {
+      const res = await listUsers()
+      setUsers(Array.isArray(res.data) ? res.data : [])
+    } catch {
+      /* ignore load errors; the picker just stays empty */
+    }
+  }, [isSysAdmin])
+
+  // Load the user list for the assign-role picker (only when authorized).
+  useEffect(() => {
+    fetchUsers()
+  }, [fetchUsers])
+
   // Page-level role gating (Req 18.4/18.5): only system_administrator may use
   // this screen. Non-sysadmins see a not-authorized state and no admin API is called.
-  if (role !== 'system_administrator') {
+  if (!isSysAdmin) {
     return (
       <div className="max-w-xl mx-auto px-6 py-8">
         <p className="text-red-400 text-sm bg-red-900/20 border border-red-800/40 rounded-lg px-3 py-2">
@@ -47,6 +65,8 @@ export default function UserListPage() {
       setEmail('')
       setPassword('')
       setNewRole('user')
+      // Refresh the picker so the new user is selectable for role assignment.
+      await fetchUsers()
     } catch (err) {
       setCreateError(errMsg(err, 'Failed to create user.'))
     }
@@ -56,11 +76,14 @@ export default function UserListPage() {
     e.preventDefault()
     setRoleError(null)
     setRoleSuccess(null)
-    if (!roleUserId.trim()) return
+    if (!roleUserId) return
     try {
-      await setUserRole(roleUserId.trim(), assignRole)
-      setRoleSuccess(`Role for user ${roleUserId.trim()} set to ${assignRole}.`)
+      await setUserRole(roleUserId, assignRole)
+      const target = users.find((u) => (u.id || u._id) === roleUserId)
+      setRoleSuccess(`Role for ${target?.email || roleUserId} set to ${assignRole}.`)
       setRoleUserId('')
+      // Reflect the role change in the loaded list.
+      await fetchUsers()
     } catch (err) {
       setRoleError(errMsg(err, 'Failed to assign role.'))
     }
@@ -99,11 +122,18 @@ export default function UserListPage() {
       <section>
         <h2 className="text-lg font-semibold text-white mb-3">Assign Role</h2>
         <form onSubmit={handleAssignRole} className="flex flex-col gap-3">
-          <input
-            type="text" placeholder="User ID" value={roleUserId}
+          <select
+            aria-label="User"
+            value={roleUserId}
             onChange={e => setRoleUserId(e.target.value)}
             className={inputCls}
-          />
+          >
+            <option value="">Select a user…</option>
+            {users.map(u => {
+              const uid = u.id || u._id
+              return <option key={uid} value={uid}>{u.email}</option>
+            })}
+          </select>
           <select value={assignRole} onChange={e => setAssignRole(e.target.value)} className={inputCls}>
             {ROLES.map(r => <option key={r} value={r}>{r}</option>)}
           </select>

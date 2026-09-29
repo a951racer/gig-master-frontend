@@ -1,10 +1,11 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
 // Mock the admin API layer so no network happens (Req 18.1-18.3).
 vi.mock('../../api/admin', () => ({
+  listUsers: vi.fn(),
   createUser: vi.fn(),
   setUserRole: vi.fn(),
   createBand: vi.fn(),
@@ -25,6 +26,7 @@ import UserListPage from './users/UserListPage'
 import BandAdminListPage from './bands/BandAdminListPage'
 import SeedGenreListPage from './seed-genres/SeedGenreListPage'
 import {
+  listUsers,
   createUser,
   setUserRole,
   createBand,
@@ -39,6 +41,7 @@ const renderWithRouter = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>)
 beforeEach(() => {
   vi.clearAllMocks()
   mockRole = undefined
+  listUsers.mockResolvedValue({ data: [] })
 })
 
 // Req 18.4, 18.5: every sysadmin screen is gated on role === 'system_administrator'.
@@ -115,13 +118,27 @@ describe('UserListPage as system_administrator (Req 18.1)', () => {
 
   it('submitting the assign-role form calls setUserRole(id, role)', async () => {
     const user = userEvent.setup()
+    // The assign-role picker is populated from listUsers().
+    listUsers.mockResolvedValue({
+      data: [{ id: 'user-99', email: 'target@band.com', role: 'user' }],
+    })
     setUserRole.mockResolvedValueOnce({ data: {} })
 
     renderWithRouter(<UserListPage />)
 
-    await user.type(screen.getByPlaceholderText(/user id/i), 'user-99')
-    const assignSelect = screen.getAllByRole('combobox')[1]
-    await user.selectOptions(assignSelect, 'system_administrator')
+    // Wait for the user picker to populate, then select the target user.
+    const userPicker = await screen.findByLabelText('User')
+    await waitFor(() =>
+      expect(within(userPicker).getByText('target@band.com')).toBeInTheDocument()
+    )
+    await user.selectOptions(userPicker, 'user-99')
+
+    // The assign-role form has two selects: the User picker and the role select.
+    // The role select is the last combobox on the page (create-role, user
+    // picker, then assign-role).
+    const comboboxes = screen.getAllByRole('combobox')
+    const assignRoleSelect = comboboxes[comboboxes.length - 1]
+    await user.selectOptions(assignRoleSelect, 'system_administrator')
 
     await user.click(screen.getByRole('button', { name: /assign role/i }))
 
