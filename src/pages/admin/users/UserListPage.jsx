@@ -61,7 +61,7 @@ export default function UserListPage() {
     try {
       const res = await createUser({ email: email.trim(), password, role: newRole })
       const created = res?.data
-      setCreateSuccess(`Created ${created?.email || email.trim()}${created?.id ? ` (id ${created.id})` : ''}.`)
+      setCreateSuccess(`Created ${created?.email || email.trim()}.`)
       setEmail('')
       setPassword('')
       setNewRole('user')

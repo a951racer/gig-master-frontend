@@ -118,7 +118,7 @@ export default function JoinRequestsPage() {
                 }`}
               >
                 <span className="flex-1 text-white text-sm">
-                  {name || `Band ${id}`}
+                  {name || 'Unknown band'}
                 </span>
                 <StatusBadge status={req.status} />
                 {req.status === 'approved' && (

@@ -15,6 +15,13 @@ function errMsg(err, fallback) {
   return err?.response?.data?.error?.message || err?.response?.data?.message || fallback
 }
 
+// Resolve a friendly label from the loaded lists, falling back to the id if the
+// list has not populated (so a message is never blank).
+function labelFor(list, id, key) {
+  const match = (list || []).find((item) => (item.id || item._id) === id)
+  return (match && match[key]) || id
+}
+
 export default function BandAdminListPage() {
   const { role } = useBand()
   const isSysAdmin = role === 'system_administrator'
@@ -88,7 +95,7 @@ export default function BandAdminListPage() {
     try {
       const res = await createBand({ name: name.trim(), administrator })
       const created = res?.data
-      setCreateSuccess(`Created band ${created?.name || name.trim()}${created?.id ? ` (id ${created.id})` : ''}.`)
+      setCreateSuccess(`Created band ${created?.name || name.trim()}.`)
       setName('')
       setAdministrator('')
       // Refresh the band picker so the new band is selectable.
@@ -105,7 +112,7 @@ export default function BandAdminListPage() {
     if (!memberBandId || !memberUserId) return
     try {
       await addBandMember(memberBandId, memberUserId)
-      setMemberSuccess(`Added user ${memberUserId} to band ${memberBandId}.`)
+      setMemberSuccess(`Added ${labelFor(users, memberUserId, 'email')} to ${labelFor(bands, memberBandId, 'name')}.`)
       setMemberUserId('')
     } catch (err) {
       setMemberError(errMsg(err, 'Failed to add member.'))
@@ -119,7 +126,7 @@ export default function BandAdminListPage() {
     if (!adminBandId || !adminUserId) return
     try {
       await setBandAdministrator(adminBandId, adminUserId)
-      setAdminSuccess(`Administrator of band ${adminBandId} set to user ${adminUserId}.`)
+      setAdminSuccess(`Administrator of ${labelFor(bands, adminBandId, 'name')} set to ${labelFor(users, adminUserId, 'email')}.`)
       setAdminUserId('')
     } catch (err) {
       setAdminError(errMsg(err, 'Failed to set administrator.'))
