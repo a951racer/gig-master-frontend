@@ -3,10 +3,17 @@ import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter, Routes, Route } from 'react-router-dom'
 
-// Mock the bands API layer (join-request queue) so no network happens.
+// Mock the bands API layer (join-request queue + band rename) so no network happens.
 vi.mock('../../api/bands', () => ({
   listJoinRequests: vi.fn(),
   resolveJoinRequest: vi.fn(),
+  renameBand: vi.fn(),
+}))
+
+// BandAdminPage's "Band settings" section uses the membership refresh helper,
+// which triggers /auth/refresh and a full-page navigation; stub it out.
+vi.mock('../bands/refreshMembership', () => ({
+  refreshMembershipAndGo: vi.fn(),
 }))
 
 // Mock the genres API layer (genre editor) so no network happens.

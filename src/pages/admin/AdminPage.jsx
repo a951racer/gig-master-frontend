@@ -5,17 +5,32 @@ export default function AdminPage() {
   const { role } = useBand()
   const isSysAdmin = role === 'system_administrator'
 
+  const linkCls = ({ isActive }) =>
+    `text-sm px-3 py-2 rounded-lg transition-colors ${
+      isActive
+        ? 'bg-purple-700 text-white'
+        : 'text-gray-300 hover:text-white hover:bg-purple-900/30'
+    }`
+
   return (
-    <div>
-      <h1>Admin</h1>
-      <nav>
-        <NavLink to="/admin/genres">Genres</NavLink>
+    <div className="max-w-xl mx-auto px-6 py-8">
+      <h1 className="text-2xl font-bold text-white mb-6">Admin</h1>
+      <nav className="flex flex-wrap gap-2 mb-6">
+        <NavLink to="/admin/genres" className={linkCls}>
+          Genres
+        </NavLink>
         {/* Sysadmin-only links, gated on the decoded token role (Req 18.4/18.5). */}
         {isSysAdmin && (
           <>
-            <NavLink to="/admin/users">Users</NavLink>
-            <NavLink to="/admin/bands">Bands</NavLink>
-            <NavLink to="/admin/seed-genres">Seed Genres</NavLink>
+            <NavLink to="/admin/users" className={linkCls}>
+              Users
+            </NavLink>
+            <NavLink to="/admin/bands" className={linkCls}>
+              Bands
+            </NavLink>
+            <NavLink to="/admin/seed-genres" className={linkCls}>
+              Seed Genres
+            </NavLink>
           </>
         )}
       </nav>
