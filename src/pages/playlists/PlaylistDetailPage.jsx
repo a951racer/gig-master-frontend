@@ -9,6 +9,7 @@ import {
 import { CSS } from '@dnd-kit/utilities'
 import { getPlaylist, addSong, removeSong, reorderSongs } from '../../api/playlists'
 import SongCatalogPanel from '../../components/SongCatalogPanel'
+import { useBand } from '../../auth/BandContext'
 
 function SortableSongItem({ song, index, onRemove }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -58,6 +59,7 @@ function PlaylistDropZone({ children, isEmpty }) {
 export default function PlaylistDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const { currentBand } = useBand()
   const [playlist, setPlaylist] = useState(null)
   const [playlistSongs, setPlaylistSongs] = useState([])
   const [loading, setLoading] = useState(true)
@@ -67,11 +69,12 @@ export default function PlaylistDetailPage() {
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }))
 
   useEffect(() => {
+    setLoading(true)
     getPlaylist(id)
       .then(res => { setPlaylist(res.data); setPlaylistSongs(res.data.songs || []) })
       .catch(() => setError('Failed to load playlist'))
       .finally(() => setLoading(false))
-  }, [id])
+  }, [id, currentBand?.id])
 
   const handleDragStart = ({ active }) => setActiveItem(active.data.current)
 

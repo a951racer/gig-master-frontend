@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, useSearchParams } from 'react-router-dom'
 import { createPlaylist, getPlaylist, updatePlaylist } from '../../api/playlists'
+import { useBand } from '../../auth/BandContext'
 
 const inputCls = 'w-full bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
 const labelCls = 'block text-sm font-medium text-gray-300 mb-1.5'
@@ -10,6 +11,7 @@ export default function PlaylistFormPage() {
   const [searchParams] = useSearchParams()
   const editId = searchParams.get('edit')
   const isEdit = Boolean(editId)
+  const { currentBand } = useBand()
   const [form, setForm] = useState({ name: '', description: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -20,7 +22,7 @@ export default function PlaylistFormPage() {
         .then(res => setForm({ name: res.data.name, description: res.data.description || '' }))
         .catch(() => setError('Failed to load playlist'))
     }
-  }, [editId, isEdit])
+  }, [editId, isEdit, currentBand?.id])
 
   const handleSubmit = async (e) => {
     e.preventDefault(); setError(''); setLoading(true)
