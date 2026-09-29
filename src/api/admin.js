@@ -1,6 +1,9 @@
 import api from './axiosInstance'
 
-// Users — POST /admin/users, PATCH /admin/users/:id/role
+// Users — GET/POST /admin/users, PATCH /admin/users/:id/role
+export const listUsers = () =>
+  api.get('/admin/users')
+
 export const createUser = ({ email, password, role }) =>
   api.post('/admin/users', { email, password, role })
 
