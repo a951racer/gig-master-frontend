@@ -83,17 +83,17 @@ describe('AcceptInvitePage logged-out routing', () => {
 })
 
 describe('AcceptInvitePage logged-in accept', () => {
-  it('accepts and refreshes the session on success', async () => {
+  // A logged-in visitor (typically returning from login/registration via the
+  // `next` round-trip) should have the invite accepted automatically on arrival
+  // — no second click required.
+  it('auto-accepts on arrival and refreshes the session on success', async () => {
     mockAuth = { token: 'jwt', isLoading: false }
     getInvite.mockResolvedValueOnce({
       data: { bandName: 'The Owls', email: 'a@x.com', status: 'pending', hasAccount: true },
     })
     acceptInvite.mockResolvedValueOnce({ data: { bandId: 'band-9', status: 'accepted' } })
 
-    const user = userEvent.setup()
     renderAt()
-
-    await user.click(await screen.findByRole('button', { name: /accept invite/i }))
 
     await waitFor(() => {
       expect(acceptInvite).toHaveBeenCalledWith('raw-token')
@@ -101,20 +101,45 @@ describe('AcceptInvitePage logged-in accept', () => {
     await waitFor(() => {
       expect(refreshMembershipAndGo).toHaveBeenCalledWith('/songs', { selectBandId: 'band-9' })
     })
+    // Auto-accept fires exactly once.
+    expect(acceptInvite).toHaveBeenCalledTimes(1)
   })
 
-  it('shows a mismatch message on 403', async () => {
+  it('shows a mismatch message on 403 without requiring a click, and offers Try again', async () => {
     mockAuth = { token: 'jwt', isLoading: false }
     getInvite.mockResolvedValueOnce({
       data: { bandName: 'The Owls', email: 'invited@x.com', status: 'pending', hasAccount: true },
     })
     acceptInvite.mockRejectedValueOnce({ response: { status: 403 } })
 
+    renderAt()
+
+    // Auto-accept fires and fails; the mismatch message appears without a click.
+    expect(await screen.findByRole('alert')).toHaveTextContent(/invited@x.com/)
+    // A manual retry button is offered as a fallback.
+    expect(screen.getByRole('button', { name: /try again/i })).toBeInTheDocument()
+  })
+
+  it('retrying after a failure calls acceptInvite again', async () => {
+    mockAuth = { token: 'jwt', isLoading: false }
+    getInvite.mockResolvedValueOnce({
+      data: { bandName: 'The Owls', email: 'a@x.com', status: 'pending', hasAccount: true },
+    })
+    acceptInvite
+      .mockRejectedValueOnce({ response: { status: 500 } })
+      .mockResolvedValueOnce({ data: { bandId: 'band-9', status: 'accepted' } })
+
     const user = userEvent.setup()
     renderAt()
 
-    await user.click(await screen.findByRole('button', { name: /accept invite/i }))
+    const retry = await screen.findByRole('button', { name: /try again/i })
+    await user.click(retry)
 
-    expect(await screen.findByRole('alert')).toHaveTextContent(/invited@x.com/)
+    await waitFor(() => {
+      expect(acceptInvite).toHaveBeenCalledTimes(2)
+    })
+    await waitFor(() => {
+      expect(refreshMembershipAndGo).toHaveBeenCalledWith('/songs', { selectBandId: 'band-9' })
+    })
   })
 })
