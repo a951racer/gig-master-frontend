@@ -102,6 +102,16 @@ axiosInstance.interceptors.request.use((config) => {
   return config
 })
 
+// Auth endpoints (login/refresh/register) must NOT trigger the silent-refresh
+// retry: a 401 from them is a genuine credential/session failure that should
+// reject straight through so the calling page can show the error. Running the
+// refresh flow for these caused the login form to hang and forced a redirect
+// instead of surfacing 'invalid credentials'.
+const AUTH_ENDPOINTS = ['/auth/login', '/auth/refresh', '/auth/register']
+function isAuthEndpoint(url) {
+  return typeof url === 'string' && AUTH_ENDPOINTS.some((p) => url.includes(p))
+}
+
 // Response interceptor — on 401, attempt silent refresh then retry
 let isRefreshing = false
 let failedQueue = []
@@ -129,7 +139,11 @@ axiosInstance.interceptors.response.use(
       return Promise.reject(error)
     }
 
-    if (error.response?.status === 401 && !originalRequest._retry) {
+    if (
+      error.response?.status === 401 &&
+      !originalRequest._retry &&
+      !isAuthEndpoint(originalRequest?.url)
+    ) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject })
