@@ -64,7 +64,8 @@ describe('NavBar', () => {
   })
 
   describe('band switcher options mirror the token membership claim', () => {
-    it('renders one option per band with matching label and value', () => {
+    it('renders one option per band, sorted alphabetically by name', () => {
+      // Provided in non-alphabetical order to prove the switcher sorts them.
       const bands = [
         { id: 'b1', name: 'The Alphas', isAdmin: false },
         { id: 'b2', name: 'Beta Crew', isAdmin: true },
@@ -83,10 +84,15 @@ describe('NavBar', () => {
 
       // No placeholder option because a current band is selected.
       expect(options).toHaveLength(bands.length)
+
+      // Options are the same set of bands, rendered alphabetically by name.
+      const expected = [...bands].sort((a, b) => a.name.localeCompare(b.name))
       options.forEach((opt, i) => {
-        expect(opt).toHaveValue(bands[i].id)
-        expect(opt).toHaveTextContent(bands[i].name)
+        expect(opt).toHaveValue(expected[i].id)
+        expect(opt).toHaveTextContent(expected[i].name)
       })
+      // Sanity: the first option is the alphabetically-first band, not b1.
+      expect(options[0]).toHaveTextContent('Beta Crew')
     })
 
     it('shows a disabled placeholder option when no current band is selected', () => {

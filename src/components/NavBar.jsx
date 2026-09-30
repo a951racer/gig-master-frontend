@@ -43,6 +43,11 @@ export default function NavBar() {
   const isBandAdmin = Boolean(currentBand?.isAdmin)
   const isSystemAdmin = role === 'system_administrator'
 
+  // Bands arrive in JWT membership order; sort the switcher alphabetically by name.
+  const sortedBands = [...bands].sort((a, b) =>
+    String(a.name || '').localeCompare(String(b.name || ''))
+  )
+
   const linkClass = (active) =>
     `px-3 py-1.5 rounded text-sm font-medium transition-colors ${
       active
@@ -106,7 +111,7 @@ export default function NavBar() {
                 Select a band…
               </option>
             )}
-            {bands.map((b) => (
+            {sortedBands.map((b) => (
               <option key={b.id} value={b.id}>
                 {b.name}
               </option>
