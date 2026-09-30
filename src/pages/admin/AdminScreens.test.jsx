@@ -15,6 +15,9 @@ vi.mock('../../api/admin', () => ({
   listBandMembers: vi.fn(),
   setBandAdministrator: vi.fn(),
   renameBand: vi.fn(),
+  archiveBand: vi.fn(),
+  unarchiveBand: vi.fn(),
+  deleteBand: vi.fn(),
   getSeedGenres: vi.fn(),
   updateSeedGenres: vi.fn(),
 }))
@@ -40,6 +43,9 @@ import {
   listBandMembers,
   setBandAdministrator,
   renameBand,
+  archiveBand,
+  unarchiveBand,
+  deleteBand,
   getSeedGenres,
   updateSeedGenres,
 } from '../../api/admin'
@@ -449,6 +455,94 @@ describe('BandAdminListPage as system_administrator (Req 18.2)', () => {
     await user.selectOptions(membersSelect, 'b-1')
 
     expect(await screen.findByText(/band not found/i)).toBeInTheDocument()
+  })
+})
+
+// Two-stage band deletion UI (#42): archive → confirm-gated hard delete.
+describe('BandAdminListPage archive/delete (#42)', () => {
+  beforeEach(() => {
+    mockRole = 'system_administrator'
+    listUsers.mockResolvedValue({ data: [] })
+    // b-1 is active, b-2 is already archived.
+    listBands.mockResolvedValue({
+      data: [
+        { id: 'b-1', name: 'Active Band', archivedAt: null },
+        { id: 'b-2', name: 'Archived Band', archivedAt: '2024-01-01T00:00:00.000Z' },
+      ],
+    })
+  })
+
+  it('shows an Archived badge and the right actions per band', async () => {
+    renderWithRouter(<BandAdminListPage />)
+
+    // The archived band shows a badge; the active one does not.
+    expect(await screen.findByText('Archived')).toBeInTheDocument()
+    // Active band offers Archive; archived band offers Unarchive + Delete.
+    expect(screen.getByRole('button', { name: /^archive$/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /unarchive/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /^delete$/i })).toBeInTheDocument()
+  })
+
+  it('archiving a band calls archiveBand and refreshes the list', async () => {
+    const user = userEvent.setup()
+    archiveBand.mockResolvedValueOnce({ data: {} })
+
+    renderWithRouter(<BandAdminListPage />)
+
+    await user.click(await screen.findByRole('button', { name: /^archive$/i }))
+
+    await waitFor(() => {
+      expect(archiveBand).toHaveBeenCalledWith('b-1')
+    })
+    // Initial load + refresh after archive.
+    await waitFor(() => expect(listBands).toHaveBeenCalledTimes(2))
+  })
+
+  it('unarchiving a band calls unarchiveBand', async () => {
+    const user = userEvent.setup()
+    unarchiveBand.mockResolvedValueOnce({ data: {} })
+
+    renderWithRouter(<BandAdminListPage />)
+
+    await user.click(await screen.findByRole('button', { name: /unarchive/i }))
+
+    await waitFor(() => {
+      expect(unarchiveBand).toHaveBeenCalledWith('b-2')
+    })
+  })
+
+  it('deleting requires confirmation and calls deleteBand only after confirm', async () => {
+    const user = userEvent.setup()
+    deleteBand.mockResolvedValueOnce({ data: { message: 'Band deleted' } })
+
+    renderWithRouter(<BandAdminListPage />)
+
+    // Click the row Delete → opens a confirm dialog; nothing deleted yet.
+    await user.click(await screen.findByRole('button', { name: /^delete$/i }))
+    const dialog = await screen.findByRole('dialog')
+    expect(deleteBand).not.toHaveBeenCalled()
+
+    // Confirm inside the dialog (its confirm button is labeled Delete).
+    await user.click(within(dialog).getByRole('button', { name: /^delete$/i }))
+
+    await waitFor(() => {
+      expect(deleteBand).toHaveBeenCalledWith('b-2')
+    })
+  })
+
+  it('cancelling the confirm dialog does not delete', async () => {
+    const user = userEvent.setup()
+
+    renderWithRouter(<BandAdminListPage />)
+
+    await user.click(await screen.findByRole('button', { name: /^delete$/i }))
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: /cancel/i }))
+
+    await waitFor(() =>
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    )
+    expect(deleteBand).not.toHaveBeenCalled()
   })
 })
 
