@@ -12,6 +12,7 @@ vi.mock('../../api/admin', () => ({
   listBands: vi.fn(),
   createBand: vi.fn(),
   addBandMember: vi.fn(),
+  listBandMembers: vi.fn(),
   setBandAdministrator: vi.fn(),
   renameBand: vi.fn(),
   getSeedGenres: vi.fn(),
@@ -36,6 +37,7 @@ import {
   listBands,
   createBand,
   addBandMember,
+  listBandMembers,
   setBandAdministrator,
   renameBand,
   getSeedGenres,
@@ -384,6 +386,69 @@ describe('BandAdminListPage as system_administrator (Req 18.2)', () => {
     await waitFor(() => {
       expect(renameBand).toHaveBeenCalledWith('b-1', 'Renamed Owls')
     })
+  })
+
+  it('selecting a band loads its members and flags the administrator', async () => {
+    const user = userEvent.setup()
+    listBandMembers.mockResolvedValueOnce({
+      data: [
+        { id: 'u-1', email: 'admin@band.com', firstName: 'Ann', lastName: 'Smith', isAdmin: true },
+        { id: 'u-2', email: 'member@band.com', isAdmin: false },
+      ],
+    })
+
+    renderWithRouter(<BandAdminListPage />)
+
+    const membersSelect = await screen.findByLabelText('View members band')
+    await waitFor(() =>
+      expect(within(membersSelect).getByText('The Night Owls')).toBeInTheDocument()
+    )
+    await user.selectOptions(membersSelect, 'b-1')
+
+    await waitFor(() => {
+      expect(listBandMembers).toHaveBeenCalledWith('b-1')
+    })
+
+    // Scope assertions to the members list container so the friendly labels /
+    // emails don't collide with the same values rendered in the pickers'
+    // <option>s. The Admin badge appears only in the members list; its row is
+    // badge.closest('div') and the list is that row's parent element.
+    const badge = await screen.findByText('Admin')
+    const membersList = badge.closest('div').parentElement
+    expect(within(membersList).getByText('Smith, Ann')).toBeInTheDocument()
+    expect(within(membersList).getByText('member@band.com')).toBeInTheDocument()
+  })
+
+  it('shows an empty state when a band has no members', async () => {
+    const user = userEvent.setup()
+    listBandMembers.mockResolvedValueOnce({ data: [] })
+
+    renderWithRouter(<BandAdminListPage />)
+
+    const membersSelect = await screen.findByLabelText('View members band')
+    await waitFor(() =>
+      expect(within(membersSelect).getByText('Second Band')).toBeInTheDocument()
+    )
+    await user.selectOptions(membersSelect, 'b-2')
+
+    expect(await screen.findByText(/no members/i)).toBeInTheDocument()
+  })
+
+  it('surfaces an error when loading members fails', async () => {
+    const user = userEvent.setup()
+    listBandMembers.mockRejectedValueOnce({
+      response: { data: { error: { message: 'Band not found' } } },
+    })
+
+    renderWithRouter(<BandAdminListPage />)
+
+    const membersSelect = await screen.findByLabelText('View members band')
+    await waitFor(() =>
+      expect(within(membersSelect).getByText('The Night Owls')).toBeInTheDocument()
+    )
+    await user.selectOptions(membersSelect, 'b-1')
+
+    expect(await screen.findByText(/band not found/i)).toBeInTheDocument()
   })
 })
 

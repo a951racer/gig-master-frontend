@@ -4,6 +4,7 @@ import {
   listBands,
   createBand,
   addBandMember,
+  listBandMembers,
   setBandAdministrator,
   renameBand,
 } from '../../../api/admin'
@@ -56,6 +57,12 @@ export default function BandAdminListPage() {
   const [renameName, setRenameName] = useState('')
   const [renameError, setRenameError] = useState(null)
   const [renameSuccess, setRenameSuccess] = useState(null)
+
+  // View band members (with the admin designator).
+  const [membersBandId, setMembersBandId] = useState('')
+  const [members, setMembers] = useState([])
+  const [membersLoading, setMembersLoading] = useState(false)
+  const [membersError, setMembersError] = useState(null)
 
   const fetchUsers = useCallback(async () => {
     if (!isSysAdmin) return
@@ -157,9 +164,73 @@ export default function BandAdminListPage() {
     }
   }
 
+  async function handleSelectMembersBand(bandId) {
+    setMembersBandId(bandId)
+    setMembers([])
+    setMembersError(null)
+    if (!bandId) return
+    setMembersLoading(true)
+    try {
+      const res = await listBandMembers(bandId)
+      setMembers(Array.isArray(res.data) ? res.data : [])
+    } catch (err) {
+      setMembersError(errMsg(err, 'Failed to load band members.'))
+    } finally {
+      setMembersLoading(false)
+    }
+  }
+
   return (
     <div className="max-w-xl mx-auto px-6 py-8">
       <h1 className="text-2xl font-bold text-white mb-6">Band Management</h1>
+
+      {/* View band members */}
+      <section className="mb-10">
+        <h2 className="text-lg font-semibold text-white mb-3">Band Members</h2>
+        <select
+          aria-label="View members band"
+          value={membersBandId}
+          onChange={e => handleSelectMembersBand(e.target.value)}
+          className={inputCls + ' w-full'}
+        >
+          <option value="">Select a band…</option>
+          {bands.map(b => {
+            const bid = b.id || b._id
+            return <option key={bid} value={bid}>{b.name}</option>
+          })}
+        </select>
+
+        {membersError && <p role="alert" className="text-red-400 text-sm mt-3">{membersError}</p>}
+
+        {membersBandId && !membersError && (
+          <div className="mt-3 bg-[#2a2640] border border-purple-800/30 rounded-xl overflow-hidden">
+            {membersLoading ? (
+              <p className="text-gray-500 text-sm text-center py-6">Loading…</p>
+            ) : members.length === 0 ? (
+              <p className="text-gray-500 text-sm text-center py-6">No members</p>
+            ) : (
+              members.map((m, i) => {
+                const mid = m.id || m._id
+                return (
+                  <div
+                    key={mid}
+                    className={`flex items-center gap-3 px-4 py-3 ${
+                      i < members.length - 1 ? 'border-b border-purple-900/30' : ''
+                    }`}
+                  >
+                    <span className="flex-1 text-white text-sm">{userLabel(m)}</span>
+                    {m.isAdmin && (
+                      <span className="text-xs font-medium text-purple-200 bg-purple-800/60 rounded-full px-2 py-0.5">
+                        Admin
+                      </span>
+                    )}
+                  </div>
+                )
+              })
+            )}
+          </div>
+        )}
+      </section>
 
       {/* Create band */}
       <section className="mb-10">
