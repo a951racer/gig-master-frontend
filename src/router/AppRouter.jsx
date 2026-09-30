@@ -90,7 +90,7 @@ export default function AppRouter() {
 
               {/* Band-admin routes (pages self-gate on currentBand.isAdmin) */}
               <Route path="/band-admin" element={<ProtectedRoute><BandAdminPage /></ProtectedRoute>}>
-                <Route index element={<JoinRequestQueuePage />} />
+                <Route index element={<Navigate to="/band-admin/join-requests" replace />} />
                 <Route path="join-requests" element={<JoinRequestQueuePage />} />
                 <Route path="genres" element={<BandGenreEditorPage />} />
               </Route>
