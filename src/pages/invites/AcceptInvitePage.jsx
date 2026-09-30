@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { getInvite, acceptInvite } from '../../api/invites'
 import { useAuth } from '../../auth/AuthContext'
@@ -11,9 +11,11 @@ import { refreshMembershipAndGo } from '../bands/refreshMembership'
 //      whether the invited email already has an account.
 //   2. If the invite is not pending (expired/revoked/accepted/unknown), show a
 //      terminal message.
-//   3. If the visitor is logged in, offer an Accept button. Acceptance is
-//      enforced server-side to require the logged-in email to match the invited
-//      email; a 403 surfaces a clear "signed in as a different account" message.
+//   3. If the visitor is logged in, accept automatically on arrival (so a user
+//      returning from login/registration doesn't have to click a second time).
+//      Acceptance is enforced server-side to require the logged-in email to
+//      match the invited email; a 403 surfaces a clear "signed in as a different
+//      account" message and leaves a manual Accept button as a fallback.
 //   4. If the visitor is logged out, route them to log in (has account) or
 //      register (no account), carrying the token in `next` so they return here.
 //
@@ -30,6 +32,8 @@ export default function AcceptInvitePage() {
   const [loadError, setLoadError] = useState(null)
   const [accepting, setAccepting] = useState(false)
   const [acceptError, setAcceptError] = useState(null)
+  // Ensures the auto-accept effect fires at most once per mount.
+  const autoAcceptedRef = useRef(false)
 
   const load = useCallback(async () => {
     if (!token) {
@@ -61,7 +65,7 @@ export default function AcceptInvitePage() {
     load()
   }, [load])
 
-  async function handleAccept() {
+  const handleAccept = useCallback(async () => {
     setAccepting(true)
     setAcceptError(null)
     try {
@@ -88,7 +92,26 @@ export default function AcceptInvitePage() {
       }
       setAccepting(false)
     }
-  }
+  }, [token, invite])
+
+  // Auto-accept once the invite is loaded and pending and the user is logged
+  // in. This covers the common case of a user who followed the invite link,
+  // signed in (or registered then signed in), and was returned here via the
+  // `next` round-trip: they shouldn't have to click Accept a second time. The
+  // ref guard keeps this to a single attempt; if it fails (e.g. 403 email
+  // mismatch) the manual Accept button remains as a fallback.
+  useEffect(() => {
+    if (
+      !autoAcceptedRef.current &&
+      isLoggedIn &&
+      invite &&
+      invite.status === 'pending' &&
+      !accepting
+    ) {
+      autoAcceptedRef.current = true
+      handleAccept()
+    }
+  }, [isLoggedIn, invite, accepting, handleAccept])
 
   const nextParam = `/invites/accept?token=${encodeURIComponent(token)}`
 
@@ -138,20 +161,23 @@ export default function AcceptInvitePage() {
               </p>
 
               {isLoggedIn ? (
-                <>
-                  <button
-                    onClick={handleAccept}
-                    disabled={accepting}
-                    className="w-full bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-colors text-sm"
-                  >
-                    {accepting ? 'Joining…' : 'Accept invite'}
-                  </button>
-                  {acceptError && (
-                    <p role="alert" className="text-red-400 text-sm bg-red-900/20 border border-red-800/40 rounded-lg px-3 py-2 mt-4">
+                acceptError ? (
+                  <>
+                    <p role="alert" className="text-red-400 text-sm bg-red-900/20 border border-red-800/40 rounded-lg px-3 py-2 mb-4">
                       {acceptError}
                     </p>
-                  )}
-                </>
+                    <button
+                      onClick={handleAccept}
+                      disabled={accepting}
+                      className="w-full bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white font-medium py-2.5 rounded-lg transition-colors text-sm"
+                    >
+                      {accepting ? 'Joining…' : 'Try again'}
+                    </button>
+                  </>
+                ) : (
+                  // Auto-accept is in flight (or about to start); no button needed.
+                  <p className="text-gray-400 text-sm text-center">Joining {invite?.bandName || 'the band'}…</p>
+                )
               ) : invite?.hasAccount ? (
                 <>
                   <p className="text-gray-400 text-sm mb-4">
