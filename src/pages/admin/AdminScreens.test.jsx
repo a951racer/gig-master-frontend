@@ -8,6 +8,7 @@ vi.mock('../../api/admin', () => ({
   listUsers: vi.fn(),
   createUser: vi.fn(),
   setUserRole: vi.fn(),
+  updateUser: vi.fn(),
   listBands: vi.fn(),
   createBand: vi.fn(),
   addBandMember: vi.fn(),
@@ -31,6 +32,7 @@ import {
   listUsers,
   createUser,
   setUserRole,
+  updateUser,
   listBands,
   createBand,
   addBandMember,
@@ -110,8 +112,7 @@ describe('UserListPage as system_administrator (Req 18.1)', () => {
     await user.type(screen.getByPlaceholderText(/email/i), 'new@band.com')
     await user.type(screen.getByPlaceholderText(/password/i), 'sup3rsecret')
     // Set the create-user role select to system_administrator.
-    const roleSelect = screen.getAllByRole('combobox')[0]
-    await user.selectOptions(roleSelect, 'system_administrator')
+    await user.selectOptions(screen.getByLabelText(/new user role/i), 'system_administrator')
 
     await user.click(screen.getByRole('button', { name: /create user/i }))
 
@@ -171,18 +172,104 @@ describe('UserListPage as system_administrator (Req 18.1)', () => {
     // Selection is by value (id), so the friendly label does not affect it.
     await user.selectOptions(userPicker, 'user-99')
 
-    // The assign-role form has two selects: the User picker and the role select.
-    // The role select is the last combobox on the page (create-role, user
-    // picker, then assign-role).
-    const comboboxes = screen.getAllByRole('combobox')
-    const assignRoleSelect = comboboxes[comboboxes.length - 1]
-    await user.selectOptions(assignRoleSelect, 'system_administrator')
+    // Target the assign-role select by its accessible label so added selects
+    // elsewhere on the page (e.g. the edit-user section) don't shift indices.
+    await user.selectOptions(screen.getByLabelText(/role to assign/i), 'system_administrator')
 
     await user.click(screen.getByRole('button', { name: /assign role/i }))
 
     await waitFor(() => {
       expect(setUserRole).toHaveBeenCalledWith('user-99', 'system_administrator')
     })
+  })
+})
+
+// Edit user (#40): sysadmin selects a user, edits fields, and saves via updateUser.
+describe('UserListPage edit-user (#40)', () => {
+  beforeEach(() => {
+    mockRole = 'system_administrator'
+    listUsers.mockResolvedValue({
+      data: [
+        { id: 'user-7', email: 'edit@band.com', role: 'user', firstName: 'Ann', lastName: 'Smith' },
+      ],
+    })
+  })
+
+  it('populates the form from the selected user and saves changes via updateUser', async () => {
+    const user = userEvent.setup()
+    updateUser.mockResolvedValueOnce({ data: { id: 'user-7', email: 'renamed@band.com' } })
+
+    renderWithRouter(<UserListPage />)
+
+    const picker = await screen.findByLabelText(/user to edit/i)
+    await waitFor(() =>
+      expect(within(picker).getByText('Smith, Ann')).toBeInTheDocument()
+    )
+    await user.selectOptions(picker, 'user-7')
+
+    // Fields populate from the selected user.
+    const emailField = screen.getByLabelText(/edit email/i)
+    await waitFor(() => expect(emailField).toHaveValue('edit@band.com'))
+    expect(screen.getByLabelText(/edit first name/i)).toHaveValue('Ann')
+    expect(screen.getByLabelText(/edit last name/i)).toHaveValue('Smith')
+
+    // Change the email and save.
+    await user.clear(emailField)
+    await user.type(emailField, 'renamed@band.com')
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(updateUser).toHaveBeenCalledWith('user-7', {
+        email: 'renamed@band.com',
+        firstName: 'Ann',
+        lastName: 'Smith',
+        role: 'user',
+      })
+    })
+    // The list is refreshed after a successful edit.
+    await waitFor(() => expect(listUsers).toHaveBeenCalledTimes(2))
+  })
+
+  it('includes newPassword only when a password is entered', async () => {
+    const user = userEvent.setup()
+    updateUser.mockResolvedValueOnce({ data: { id: 'user-7', email: 'edit@band.com' } })
+
+    renderWithRouter(<UserListPage />)
+
+    const picker = await screen.findByLabelText(/user to edit/i)
+    await user.selectOptions(picker, 'user-7')
+    await screen.findByLabelText(/edit email/i)
+
+    await user.type(screen.getByLabelText(/reset password/i), 'fresh-password')
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    await waitFor(() => {
+      expect(updateUser).toHaveBeenCalledWith('user-7', {
+        email: 'edit@band.com',
+        firstName: 'Ann',
+        lastName: 'Smith',
+        role: 'user',
+        newPassword: 'fresh-password',
+      })
+    })
+  })
+
+  it('surfaces a server error (e.g. LAST_ADMIN) without refreshing the list again', async () => {
+    const user = userEvent.setup()
+    updateUser.mockRejectedValueOnce({
+      response: { data: { error: { code: 'LAST_ADMIN', message: 'Cannot remove the last system administrator' } } },
+    })
+
+    renderWithRouter(<UserListPage />)
+
+    const picker = await screen.findByLabelText(/user to edit/i)
+    await user.selectOptions(picker, 'user-7')
+    await screen.findByLabelText(/edit email/i)
+
+    await user.selectOptions(screen.getByLabelText(/edit role/i), 'system_administrator')
+    await user.click(screen.getByRole('button', { name: /save changes/i }))
+
+    expect(await screen.findByText(/last system administrator/i)).toBeInTheDocument()
   })
 })
 

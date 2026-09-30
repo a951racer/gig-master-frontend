@@ -25,6 +25,9 @@ const CreateBandPage = lazy(() => import('../pages/bands/CreateBandPage'))
 const JoinBandPage = lazy(() => import('../pages/bands/JoinBandPage'))
 const JoinRequestsPage = lazy(() => import('../pages/bands/JoinRequestsPage'))
 
+// Self-service profile page
+const ProfilePage = lazy(() => import('../pages/profile/ProfilePage'))
+
 // Band-admin pages (self-gate on currentBand.isAdmin)
 const BandAdminPage = lazy(() => import('../pages/band-admin/BandAdminPage'))
 const JoinRequestQueuePage = lazy(() => import('../pages/band-admin/JoinRequestQueuePage'))
@@ -87,6 +90,9 @@ export default function AppRouter() {
               <Route path="/gigs/new" element={<ProtectedRoute><GigFormPage /></ProtectedRoute>} />
               <Route path="/gigs/:id/edit" element={<ProtectedRoute><GigFormPage /></ProtectedRoute>} />
               <Route path="/gigs/:id" element={<ProtectedRoute><GigDetailPage /></ProtectedRoute>} />
+
+              {/* Self-service profile */}
+              <Route path="/profile" element={<ProtectedRoute><ProfilePage /></ProtectedRoute>} />
 
               {/* Band member routes */}
               <Route path="/bands/new" element={<ProtectedRoute><CreateBandPage /></ProtectedRoute>} />
