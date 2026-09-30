@@ -1,10 +1,14 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { register } from '../../api/auth'
 
 export default function RegisterPage() {
   const navigate = useNavigate()
-  const [email, setEmail] = useState('')
+  const [searchParams] = useSearchParams()
+  // Invite flow: prefill the invited email and carry `next` through login so
+  // the user lands back on the accept page after signing in.
+  const next = searchParams.get('next')
+  const [email, setEmail] = useState(searchParams.get('email') || '')
   const [password, setPassword] = useState('')
   const [firstName, setFirstName] = useState('')
   const [lastName, setLastName] = useState('')
@@ -17,7 +21,7 @@ export default function RegisterPage() {
     setLoading(true)
     try {
       await register(email, password, firstName, lastName)
-      navigate('/login')
+      navigate(next ? `/login?next=${encodeURIComponent(next)}` : '/login')
     } catch (err) {
       setError(err.response?.data?.error?.message || 'Registration failed')
     } finally {
@@ -80,7 +84,7 @@ export default function RegisterPage() {
             </button>
           </form>
           <p className="mt-5 text-center text-sm text-gray-400">
-            Already have an account? <Link to="/login" className="text-purple-400 hover:text-purple-300">Sign in</Link>
+            Already have an account? <Link to={next ? `/login?next=${encodeURIComponent(next)}` : '/login'} className="text-purple-400 hover:text-purple-300">Sign in</Link>
           </p>
         </div>
       </div>
