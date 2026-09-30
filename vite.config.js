@@ -8,7 +8,9 @@ export default defineConfig({
     host: '0.0.0.0',
     port: process.env.PORT || 4173,
     strictPort: true,
-    allowedHosts: ['all','gig-master-frontend-6fdd9d2dc63c.herokuapp.com','gig-master-frontend-prod-18faf705ae16.herokuapp.com'],
+    // Allow any host (the string 'all' is NOT a wildcard in Vite — it must be
+    // the boolean true — which is why the custom domain was previously blocked).
+    allowedHosts: true,
   },
   test: {
     environment: 'jsdom',
