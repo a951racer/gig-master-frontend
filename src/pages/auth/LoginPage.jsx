@@ -1,10 +1,13 @@
 import { useState } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, useSearchParams, Link } from 'react-router-dom'
 import { useAuth } from '../../auth/AuthContext'
 
 export default function LoginPage() {
   const { login } = useAuth()
   const navigate = useNavigate()
+  const [searchParams] = useSearchParams()
+  // After sign-in, return to `next` when present (e.g. an invite-accept page).
+  const next = searchParams.get('next')
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [error, setError] = useState('')
@@ -16,7 +19,7 @@ export default function LoginPage() {
     setLoading(true)
     try {
       await login(email, password)
-      navigate('/songs')
+      navigate(next || '/songs')
     } catch (err) {
       setError(err.response?.data?.error?.message || 'Login failed')
     } finally {
@@ -65,7 +68,7 @@ export default function LoginPage() {
           </form>
           <div className="mt-5 space-y-2 text-center text-sm text-gray-400">
             <p><Link to="/forgot-password" className="text-purple-400 hover:text-purple-300">Forgot password?</Link></p>
-            <p>No account? <Link to="/register" className="text-purple-400 hover:text-purple-300">Register</Link></p>
+            <p>No account? <Link to={next ? `/register?next=${encodeURIComponent(next)}` : '/register'} className="text-purple-400 hover:text-purple-300">Register</Link></p>
           </div>
         </div>
       </div>

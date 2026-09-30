@@ -46,6 +46,9 @@ export default function BandAdminPage() {
         <NavLink to="/band-admin/genres" className={linkCls}>
           Genres
         </NavLink>
+        <NavLink to="/band-admin/invites" className={linkCls}>
+          Invites
+        </NavLink>
       </nav>
 
       <BandSettings currentBand={currentBand} />

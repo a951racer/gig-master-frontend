@@ -29,6 +29,10 @@ const JoinRequestsPage = lazy(() => import('../pages/bands/JoinRequestsPage'))
 const BandAdminPage = lazy(() => import('../pages/band-admin/BandAdminPage'))
 const JoinRequestQueuePage = lazy(() => import('../pages/band-admin/JoinRequestQueuePage'))
 const BandGenreEditorPage = lazy(() => import('../pages/band-admin/BandGenreEditorPage'))
+const InvitesPage = lazy(() => import('../pages/band-admin/InvitesPage'))
+
+// Public invite-accept landing page
+const AcceptInvitePage = lazy(() => import('../pages/invites/AcceptInvitePage'))
 
 // Sysadmin pages (self-gate on role === 'system_administrator')
 const AdminPage = lazy(() => import('../pages/admin/AdminPage'))
@@ -70,6 +74,7 @@ export default function AppRouter() {
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               <Route path="/reset-password" element={<ResetPasswordPage />} />
+              <Route path="/invites/accept" element={<AcceptInvitePage />} />
 
               {/* Protected routes */}
               <Route path="/songs" element={<ProtectedRoute><SongListPage /></ProtectedRoute>} />
@@ -93,6 +98,7 @@ export default function AppRouter() {
                 <Route index element={<Navigate to="/band-admin/join-requests" replace />} />
                 <Route path="join-requests" element={<JoinRequestQueuePage />} />
                 <Route path="genres" element={<BandGenreEditorPage />} />
+                <Route path="invites" element={<InvitesPage />} />
               </Route>
 
               {/* Sysadmin routes (pages self-gate on role) */}
