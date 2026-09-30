@@ -25,6 +25,11 @@ export const createBand = ({ name, administrator }) =>
 export const addBandMember = (bandId, userId) =>
   api.post(`/admin/bands/${bandId}/members`, { userId })
 
+// List any band's members (#sysadmin view) — GET /admin/bands/:id/members
+//   → [{ id, email, firstName, lastName, isAdmin }]
+export const listBandMembers = (bandId) =>
+  api.get(`/admin/bands/${bandId}/members`)
+
 export const setBandAdministrator = (bandId, userId) =>
   api.patch(`/admin/bands/${bandId}/administrator`, { userId })
 
