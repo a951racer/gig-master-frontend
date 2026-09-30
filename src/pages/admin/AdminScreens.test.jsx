@@ -120,25 +120,55 @@ describe('UserListPage as system_administrator (Req 18.1)', () => {
         email: 'new@band.com',
         password: 'sup3rsecret',
         role: 'system_administrator',
+        firstName: '',
+        lastName: '',
+      })
+    })
+  })
+
+  it('submitting the create-user form with names passes firstName/lastName', async () => {
+    const user = userEvent.setup()
+    createUser.mockResolvedValueOnce({ data: { id: 'u-2', email: 'named@band.com' } })
+
+    renderWithRouter(<UserListPage />)
+
+    await user.type(screen.getByPlaceholderText(/email/i), 'named@band.com')
+    await user.type(screen.getByPlaceholderText(/^password$/i), 'sup3rsecret')
+    await user.type(screen.getByPlaceholderText(/first name/i), 'Ann')
+    await user.type(screen.getByPlaceholderText(/last name/i), 'Smith')
+
+    await user.click(screen.getByRole('button', { name: /create user/i }))
+
+    await waitFor(() => {
+      expect(createUser).toHaveBeenCalledWith({
+        email: 'named@band.com',
+        password: 'sup3rsecret',
+        role: 'user',
+        firstName: 'Ann',
+        lastName: 'Smith',
       })
     })
   })
 
   it('submitting the assign-role form calls setUserRole(id, role)', async () => {
     const user = userEvent.setup()
-    // The assign-role picker is populated from listUsers().
+    // The assign-role picker is populated from listUsers(). A named user is
+    // shown as "Last, First"; selection is still by option VALUE (id).
     listUsers.mockResolvedValue({
-      data: [{ id: 'user-99', email: 'target@band.com', role: 'user' }],
+      data: [
+        { id: 'user-99', email: 'target@band.com', role: 'user', firstName: 'Ann', lastName: 'Smith' },
+      ],
     })
     setUserRole.mockResolvedValueOnce({ data: {} })
 
     renderWithRouter(<UserListPage />)
 
-    // Wait for the user picker to populate, then select the target user.
+    // Wait for the user picker to populate. A named user renders as "Last, First".
     const userPicker = await screen.findByLabelText('User')
     await waitFor(() =>
-      expect(within(userPicker).getByText('target@band.com')).toBeInTheDocument()
+      expect(within(userPicker).getByText('Smith, Ann')).toBeInTheDocument()
     )
+    // Selection is by value (id), so the friendly label does not affect it.
     await user.selectOptions(userPicker, 'user-99')
 
     // The assign-role form has two selects: the User picker and the role select.
@@ -163,7 +193,8 @@ describe('BandAdminListPage as system_administrator (Req 18.2)', () => {
     // The dropdowns are populated from listUsers() and listBands().
     listUsers.mockResolvedValue({
       data: [
-        { id: 'u-1', email: 'admin@band.com', role: 'user' },
+        // u-1 has names → rendered as "Last, First". u-2 has none → email.
+        { id: 'u-1', email: 'admin@band.com', role: 'user', firstName: 'Ann', lastName: 'Smith' },
         { id: 'u-2', email: 'member@band.com', role: 'user' },
       ],
     })
@@ -182,11 +213,15 @@ describe('BandAdminListPage as system_administrator (Req 18.2)', () => {
     renderWithRouter(<BandAdminListPage />)
 
     await user.type(screen.getByPlaceholderText(/^band name$/i), 'The Night Owls')
-    // The administrator field is now a user-email dropdown; select by option value (id).
+    // The administrator field is a user dropdown; a named user shows as
+    // "Last, First" while a nameless user falls back to email. Selection is by
+    // option value (id) regardless of label.
     const adminSelect = await screen.findByLabelText('Create band administrator')
     await waitFor(() =>
-      expect(within(adminSelect).getByText('admin@band.com')).toBeInTheDocument()
+      expect(within(adminSelect).getByText('Smith, Ann')).toBeInTheDocument()
     )
+    // A user without names still renders by email.
+    expect(within(adminSelect).getByText('member@band.com')).toBeInTheDocument()
     await user.selectOptions(adminSelect, 'u-1')
 
     await user.click(screen.getByRole('button', { name: /create band/i }))

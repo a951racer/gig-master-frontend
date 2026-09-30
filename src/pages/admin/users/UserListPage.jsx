@@ -2,6 +2,7 @@ import { useEffect, useState, useCallback } from 'react'
 import { listUsers, createUser, setUserRole } from '../../../api/admin'
 import { useBand } from '../../../auth/BandContext'
 import { ROLE_OPTIONS } from '../../../constants/roles'
+import { userLabel } from '../../../constants/users'
 
 const inputCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
 
@@ -17,6 +18,8 @@ export default function UserListPage() {
 
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [firstName, setFirstName] = useState('')
+  const [lastName, setLastName] = useState('')
   const [newRole, setNewRole] = useState('user')
   const [createError, setCreateError] = useState(null)
   const [createSuccess, setCreateSuccess] = useState(null)
@@ -59,11 +62,19 @@ export default function UserListPage() {
     setCreateSuccess(null)
     if (!email.trim() || !password) return
     try {
-      const res = await createUser({ email: email.trim(), password, role: newRole })
+      const res = await createUser({
+        email: email.trim(),
+        password,
+        role: newRole,
+        firstName: firstName.trim(),
+        lastName: lastName.trim(),
+      })
       const created = res?.data
       setCreateSuccess(`Created ${created?.email || email.trim()}.`)
       setEmail('')
       setPassword('')
+      setFirstName('')
+      setLastName('')
       setNewRole('user')
       // Refresh the picker so the new user is selectable for role assignment.
       await fetchUsers()
@@ -107,6 +118,16 @@ export default function UserListPage() {
             onChange={e => setPassword(e.target.value)}
             className={inputCls}
           />
+          <input
+            type="text" placeholder="First name (optional)" value={firstName}
+            onChange={e => setFirstName(e.target.value)}
+            className={inputCls}
+          />
+          <input
+            type="text" placeholder="Last name (optional)" value={lastName}
+            onChange={e => setLastName(e.target.value)}
+            className={inputCls}
+          />
           <select value={newRole} onChange={e => setNewRole(e.target.value)} className={inputCls}>
             {ROLE_OPTIONS.map(r => <option key={r.value} value={r.value}>{r.label}</option>)}
           </select>
@@ -131,7 +152,7 @@ export default function UserListPage() {
             <option value="">Select a user…</option>
             {users.map(u => {
               const uid = u.id || u._id
-              return <option key={uid} value={uid}>{u.email}</option>
+              return <option key={uid} value={uid}>{userLabel(u)}</option>
             })}
           </select>
           <select value={assignRole} onChange={e => setAssignRole(e.target.value)} className={inputCls}>
