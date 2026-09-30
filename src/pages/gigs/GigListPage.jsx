@@ -16,6 +16,7 @@ export default function GigListPage() {
   useEffect(() => {
     if (hasNoBand) return
     setLoading(true)
+    setError('')
     listGigs()
       .then(res => setGigs(res.data))
       .catch(() => setError('Failed to load gigs'))
