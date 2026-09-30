@@ -120,6 +120,13 @@ export default function NavBar() {
         </label>
       )}
 
+      <Link
+        to="/profile"
+        className={linkClass(pathname.startsWith('/profile'))}
+      >
+        Profile
+      </Link>
+
       <button
         onClick={handleLogout}
         className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded hover:bg-red-900/40"

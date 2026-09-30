@@ -10,6 +10,11 @@ export const createUser = ({ email, password, role, firstName, lastName }) =>
 export const setUserRole = (id, role) =>
   api.patch(`/admin/users/${id}/role`, { role })
 
+// Admin edit of any user (#40) — PATCH /admin/users/:id with any subset of
+// { email, firstName, lastName, role, newPassword }.
+export const updateUser = (id, data) =>
+  api.patch(`/admin/users/${id}`, data)
+
 // Bands — GET/POST /admin/bands, POST /admin/bands/:id/members,
 //         PATCH /admin/bands/:id/administrator, PATCH /admin/bands/:id (rename)
 export const listBands = () =>
