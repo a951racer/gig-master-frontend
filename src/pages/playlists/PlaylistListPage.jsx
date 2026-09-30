@@ -16,6 +16,7 @@ export default function PlaylistListPage() {
   useEffect(() => {
     if (hasNoBand) return
     setLoading(true)
+    setError('')
     listPlaylists()
       .then(res => setPlaylists(res.data))
       .catch(() => setError('Failed to load playlists'))

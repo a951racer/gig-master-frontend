@@ -9,6 +9,19 @@ vi.mock('./AuthContext', () => {
   }
 })
 
+// BandContext imports setCurrentBandId to keep the axios X-Band-Id header in
+// sync. Mock it so it writes our in-memory localStorage (mirroring the real
+// module) without pulling in axios; this lets us assert persistence behavior.
+vi.mock('../api/axiosInstance', () => ({
+  setCurrentBandId: (id) => {
+    if (id === null || id === undefined || id === '') {
+      localStorage.removeItem('currentBandId')
+    } else {
+      localStorage.setItem('currentBandId', String(id))
+    }
+  },
+}))
+
 import { BandProvider, useBand } from './BandContext'
 
 // Mutable holder the mocked useAuth reads from.
@@ -183,10 +196,10 @@ describe('BandContext — band selection logic (property-style)', () => {
         expectMatchId: 'b2',
       },
       {
-        name: 'persisted id absent from token bands[] (stale)',
+        name: 'persisted id absent from token bands[] (stale) -> auto-selects first alphabetically',
         persisted: 'b-stale',
         bands: bandsFixture,
-        expectMatchId: null,
+        expectMatchId: 'b1',
       },
       {
         name: 'persisted id but token has no bands',
@@ -195,10 +208,10 @@ describe('BandContext — band selection logic (property-style)', () => {
         expectMatchId: null,
       },
       {
-        name: 'no persisted id, several bands (no auto-pick)',
+        name: 'no persisted id, several bands -> auto-selects first alphabetically',
         persisted: null,
         bands: bandsFixture,
-        expectMatchId: null,
+        expectMatchId: 'b1',
       },
       {
         name: 'no persisted id, empty bands',

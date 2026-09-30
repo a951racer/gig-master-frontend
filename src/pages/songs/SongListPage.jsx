@@ -31,6 +31,7 @@ export default function SongListPage() {
   useEffect(() => {
     if (hasNoBand) return
     setLoading(true)
+    setError('')
     const params = {}
     if (titleFilter) params.title = titleFilter
     if (genreFilter) params.genre = genreFilter
