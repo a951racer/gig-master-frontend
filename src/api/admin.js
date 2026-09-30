@@ -36,6 +36,16 @@ export const setBandAdministrator = (bandId, userId) =>
 export const renameBand = (bandId, name) =>
   api.patch(`/admin/bands/${bandId}`, { name })
 
+// Two-stage delete (#42): archive (soft) then hard-delete (cascade).
+export const archiveBand = (bandId) =>
+  api.post(`/admin/bands/${bandId}/archive`)
+
+export const unarchiveBand = (bandId) =>
+  api.post(`/admin/bands/${bandId}/unarchive`)
+
+export const deleteBand = (bandId) =>
+  api.delete(`/admin/bands/${bandId}`)
+
 // Seed genres — GET/PUT /admin/seed-genres
 export const getSeedGenres = () =>
   api.get('/admin/seed-genres')

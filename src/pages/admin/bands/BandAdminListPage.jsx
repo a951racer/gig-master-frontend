@@ -7,7 +7,11 @@ import {
   listBandMembers,
   setBandAdministrator,
   renameBand,
+  archiveBand,
+  unarchiveBand,
+  deleteBand,
 } from '../../../api/admin'
+import ConfirmDialog from '../../../components/ConfirmDialog'
 import { useBand } from '../../../auth/BandContext'
 import { userLabel } from '../../../constants/users'
 
@@ -63,6 +67,12 @@ export default function BandAdminListPage() {
   const [members, setMembers] = useState([])
   const [membersLoading, setMembersLoading] = useState(false)
   const [membersError, setMembersError] = useState(null)
+
+  // Two-stage delete (#42): archive/unarchive, then confirm-gated hard delete.
+  const [deleteError, setDeleteError] = useState(null)
+  const [deleteSuccess, setDeleteSuccess] = useState(null)
+  const [pendingBandId, setPendingBandId] = useState(null)
+  const [confirmDeleteBand, setConfirmDeleteBand] = useState(null)
 
   const fetchUsers = useCallback(async () => {
     if (!isSysAdmin) return
@@ -161,6 +171,60 @@ export default function BandAdminListPage() {
       await fetchBands()
     } catch (err) {
       setRenameError(errMsg(err, 'Failed to rename band.'))
+    }
+  }
+
+  async function handleArchive(bandId) {
+    setDeleteError(null)
+    setDeleteSuccess(null)
+    setPendingBandId(bandId)
+    try {
+      await archiveBand(bandId)
+      setDeleteSuccess(`Archived ${labelFor(bands, bandId, 'name')}.`)
+      await fetchBands()
+    } catch (err) {
+      setDeleteError(errMsg(err, 'Failed to archive band.'))
+    } finally {
+      setPendingBandId(null)
+    }
+  }
+
+  async function handleUnarchive(bandId) {
+    setDeleteError(null)
+    setDeleteSuccess(null)
+    setPendingBandId(bandId)
+    try {
+      await unarchiveBand(bandId)
+      setDeleteSuccess(`Restored ${labelFor(bands, bandId, 'name')}.`)
+      await fetchBands()
+    } catch (err) {
+      setDeleteError(errMsg(err, 'Failed to unarchive band.'))
+    } finally {
+      setPendingBandId(null)
+    }
+  }
+
+  async function handleConfirmDelete() {
+    const band = confirmDeleteBand
+    setConfirmDeleteBand(null)
+    if (!band) return
+    const bandId = band.id || band._id
+    setDeleteError(null)
+    setDeleteSuccess(null)
+    setPendingBandId(bandId)
+    try {
+      await deleteBand(bandId)
+      setDeleteSuccess(`Deleted ${band.name}.`)
+      // If the deleted band was selected for the members view, clear it.
+      if (membersBandId === bandId) {
+        setMembersBandId('')
+        setMembers([])
+      }
+      await fetchBands()
+    } catch (err) {
+      setDeleteError(errMsg(err, 'Failed to delete band.'))
+    } finally {
+      setPendingBandId(null)
     }
   }
 
@@ -361,6 +425,80 @@ export default function BandAdminListPage() {
         {renameError && <p className="text-red-400 text-sm mt-3">{renameError}</p>}
         {renameSuccess && <p className="text-green-400 text-sm mt-3">{renameSuccess}</p>}
       </section>
+
+      {/* Archive / delete bands (two-stage delete) */}
+      <section className="mt-10">
+        <h2 className="text-lg font-semibold text-white mb-1">Archive / Delete Bands</h2>
+        <p className="text-gray-400 text-xs mb-3">
+          A band must be archived before it can be permanently deleted. Archiving
+          is reversible; deleting is not and removes the band&apos;s songs,
+          playlists, gigs, genres, and memberships.
+        </p>
+
+        {deleteError && <p role="alert" className="text-red-400 text-sm mb-3">{deleteError}</p>}
+        {deleteSuccess && <p className="text-green-400 text-sm mb-3">{deleteSuccess}</p>}
+
+        <div className="bg-[#2a2640] border border-purple-800/30 rounded-xl overflow-hidden">
+          {bands.length === 0 ? (
+            <p className="text-gray-500 text-sm text-center py-6">No bands</p>
+          ) : (
+            bands.map((b, i) => {
+              const bid = b.id || b._id
+              const isArchived = Boolean(b.archivedAt)
+              const busy = pendingBandId === bid
+              return (
+                <div
+                  key={bid}
+                  className={`flex items-center gap-3 px-4 py-3 ${
+                    i < bands.length - 1 ? 'border-b border-purple-900/30' : ''
+                  }`}
+                >
+                  <span className="flex-1 text-white text-sm">{b.name}</span>
+                  {isArchived && (
+                    <span className="text-xs font-medium text-amber-200 bg-amber-800/50 rounded-full px-2 py-0.5">
+                      Archived
+                    </span>
+                  )}
+                  {isArchived ? (
+                    <>
+                      <button
+                        onClick={() => handleUnarchive(bid)}
+                        disabled={busy}
+                        className="text-xs text-gray-300 hover:text-white disabled:opacity-50 transition-colors px-2 py-1"
+                      >
+                        Unarchive
+                      </button>
+                      <button
+                        onClick={() => setConfirmDeleteBand(b)}
+                        disabled={busy}
+                        className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50 transition-colors px-2 py-1"
+                      >
+                        Delete
+                      </button>
+                    </>
+                  ) : (
+                    <button
+                      onClick={() => handleArchive(bid)}
+                      disabled={busy}
+                      className="text-xs text-amber-300 hover:text-amber-200 disabled:opacity-50 transition-colors px-2 py-1"
+                    >
+                      Archive
+                    </button>
+                  )}
+                </div>
+              )
+            })
+          )}
+        </div>
+      </section>
+
+      {confirmDeleteBand && (
+        <ConfirmDialog
+          message={`Permanently delete ${confirmDeleteBand.name}? This removes all of its songs, playlists, gigs, genres, and memberships. This cannot be undone.`}
+          onConfirm={handleConfirmDelete}
+          onCancel={() => setConfirmDeleteBand(null)}
+        />
+      )}
     </div>
   )
 }
