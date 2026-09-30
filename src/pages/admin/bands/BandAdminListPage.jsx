@@ -8,6 +8,7 @@ import {
   renameBand,
 } from '../../../api/admin'
 import { useBand } from '../../../auth/BandContext'
+import { userLabel } from '../../../constants/users'
 
 const inputCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
 
@@ -20,6 +21,13 @@ function errMsg(err, fallback) {
 function labelFor(list, id, key) {
   const match = (list || []).find((item) => (item.id || item._id) === id)
   return (match && match[key]) || id
+}
+
+// Resolve a friendly user label (Last, First → name → email) from the loaded
+// user list, falling back to the id so a message is never blank.
+function userLabelFor(list, id) {
+  const match = (list || []).find((item) => (item.id || item._id) === id)
+  return userLabel(match) || id
 }
 
 export default function BandAdminListPage() {
@@ -112,7 +120,7 @@ export default function BandAdminListPage() {
     if (!memberBandId || !memberUserId) return
     try {
       await addBandMember(memberBandId, memberUserId)
-      setMemberSuccess(`Added ${labelFor(users, memberUserId, 'email')} to ${labelFor(bands, memberBandId, 'name')}.`)
+      setMemberSuccess(`Added ${userLabelFor(users, memberUserId)} to ${labelFor(bands, memberBandId, 'name')}.`)
       setMemberUserId('')
     } catch (err) {
       setMemberError(errMsg(err, 'Failed to add member.'))
@@ -126,7 +134,7 @@ export default function BandAdminListPage() {
     if (!adminBandId || !adminUserId) return
     try {
       await setBandAdministrator(adminBandId, adminUserId)
-      setAdminSuccess(`Administrator of ${labelFor(bands, adminBandId, 'name')} set to ${labelFor(users, adminUserId, 'email')}.`)
+      setAdminSuccess(`Administrator of ${labelFor(bands, adminBandId, 'name')} set to ${userLabelFor(users, adminUserId)}.`)
       setAdminUserId('')
     } catch (err) {
       setAdminError(errMsg(err, 'Failed to set administrator.'))
@@ -171,7 +179,7 @@ export default function BandAdminListPage() {
             <option value="">Select a user…</option>
             {users.map(u => {
               const uid = u.id || u._id
-              return <option key={uid} value={uid}>{u.email}</option>
+              return <option key={uid} value={uid}>{userLabel(u)}</option>
             })}
           </select>
           <button type="submit" className="bg-purple-700 hover:bg-purple-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors self-start">
@@ -207,7 +215,7 @@ export default function BandAdminListPage() {
             <option value="">Select a user…</option>
             {users.map(u => {
               const uid = u.id || u._id
-              return <option key={uid} value={uid}>{u.email}</option>
+              return <option key={uid} value={uid}>{userLabel(u)}</option>
             })}
           </select>
           <button type="submit" className="bg-purple-700 hover:bg-purple-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors self-start">
@@ -243,7 +251,7 @@ export default function BandAdminListPage() {
             <option value="">Select a user…</option>
             {users.map(u => {
               const uid = u.id || u._id
-              return <option key={uid} value={uid}>{u.email}</option>
+              return <option key={uid} value={uid}>{userLabel(u)}</option>
             })}
           </select>
           <button type="submit" className="bg-purple-700 hover:bg-purple-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors self-start">
