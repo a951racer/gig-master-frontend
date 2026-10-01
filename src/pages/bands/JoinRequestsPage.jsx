@@ -1,9 +1,9 @@
 import { useEffect, useState } from 'react'
-import { Link } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { listMyJoinRequests } from '../../api/bands'
 import { useBand } from '../../auth/BandContext'
 import { setCurrentBandId } from '../../api/axiosInstance'
-import { refreshMembershipAndGo } from './refreshMembership'
+import { useRefreshMembership } from './refreshMembership'
 
 // Normalize the band reference on a join request. The API returns
 // [{ band, status }] where `band` may be an id string or a populated object
@@ -38,6 +38,8 @@ function StatusBadge({ status }) {
 // and becomes selectable (Req 7.1).
 export default function JoinRequestsPage() {
   const { bands = [], setCurrentBand } = useBand() || {}
+  const navigate = useNavigate()
+  const refreshMembershipAndGo = useRefreshMembership()
   const [requests, setRequests] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
@@ -68,10 +70,11 @@ export default function JoinRequestsPage() {
   const handleSwitchTo = (id) => {
     const inClaim = bands.some((b) => String(b.id) === String(id))
     if (inClaim) {
-      // Already in the token's bands[] — select directly and go to songs.
+      // Already in the token's bands[] — select directly and go to songs
+      // (no refresh needed since the band is already in the claim).
       setCurrentBand?.(id)
       setCurrentBandId(id)
-      window.location.assign('/songs')
+      navigate('/songs')
     } else {
       // Recently approved but not yet in this session's token — refresh the
       // session so the band appears in bands[], select it, and navigate.

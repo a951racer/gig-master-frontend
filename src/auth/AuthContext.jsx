@@ -41,6 +41,26 @@ export function AuthProvider({ children }) {
     return res
   }
 
+  // Refresh the access token in place and push it into React state so consumers
+  // (notably BandContext, which derives bands[]/role from `token`) re-derive
+  // WITHOUT a full-page reload. Used after membership-changing actions
+  // (create band, join approved, band rename, invite accept). Returns the new
+  // token, or null if the refresh failed (callers can decide how to proceed).
+  const refresh = async () => {
+    const res = await refreshApi()
+    const newToken = res?.data?.accessToken
+    if (!newToken) return null
+    setAccessToken(newToken)
+    setToken(newToken)
+    try {
+      const payload = JSON.parse(atob(newToken.split('.')[1]))
+      setUser({ id: payload.sub })
+    } catch {
+      setUser({})
+    }
+    return newToken
+  }
+
   const logout = async () => {
     try {
       await logoutApi()
@@ -53,7 +73,7 @@ export function AuthProvider({ children }) {
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout }}>
+    <AuthContext.Provider value={{ user, token, isLoading, login, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   )
