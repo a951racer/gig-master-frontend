@@ -13,6 +13,7 @@ import {
 } from '../../../api/admin'
 import ConfirmDialog from '../../../components/ConfirmDialog'
 import { useBand } from '../../../auth/BandContext'
+import { useAuth } from '../../../auth/AuthContext'
 import { userLabel } from '../../../constants/users'
 
 const inputCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
@@ -37,7 +38,24 @@ function userLabelFor(list, id) {
 
 export default function BandAdminListPage() {
   const { role } = useBand()
+  const { user, refresh } = useAuth()
   const isSysAdmin = role === 'system_administrator'
+
+  // When a sysadmin changes their OWN band membership from this page (creates a
+  // band as self-admin, adds self as member, or sets self as admin), their JWT
+  // bands[] claim is now stale — refresh it in place so the NavBar switcher
+  // updates without a hard reload. Admin actions affecting other users don't
+  // change the current user's claim, so no refresh is needed for those.
+  const isSelf = (userId) => !!userId && !!user?.id && String(userId) === String(user.id)
+  async function refreshIfSelf(userId) {
+    if (isSelf(userId)) {
+      try {
+        await refresh()
+      } catch {
+        // Non-fatal: the switcher will catch up on the next silent refresh.
+      }
+    }
+  }
 
   const [users, setUsers] = useState([])
   const [bands, setBands] = useState([])
@@ -121,10 +139,14 @@ export default function BandAdminListPage() {
       const res = await createBand({ name: name.trim(), administrator })
       const created = res?.data
       setCreateSuccess(`Created band ${created?.name || name.trim()}.`)
+      const createdAdminId = administrator
       setName('')
       setAdministrator('')
       // Refresh the band picker so the new band is selectable.
       await fetchBands()
+      // If the admin made themselves the new band's administrator, their own
+      // claim changed — refresh the session so the NavBar switcher updates.
+      await refreshIfSelf(createdAdminId)
     } catch (err) {
       setCreateError(errMsg(err, 'Failed to create band.'))
     }
@@ -136,9 +158,11 @@ export default function BandAdminListPage() {
     setMemberSuccess(null)
     if (!memberBandId || !memberUserId) return
     try {
+      const addedUserId = memberUserId
       await addBandMember(memberBandId, memberUserId)
       setMemberSuccess(`Added ${userLabelFor(users, memberUserId)} to ${labelFor(bands, memberBandId, 'name')}.`)
       setMemberUserId('')
+      await refreshIfSelf(addedUserId)
     } catch (err) {
       setMemberError(errMsg(err, 'Failed to add member.'))
     }
@@ -150,9 +174,11 @@ export default function BandAdminListPage() {
     setAdminSuccess(null)
     if (!adminBandId || !adminUserId) return
     try {
+      const newAdminId = adminUserId
       await setBandAdministrator(adminBandId, adminUserId)
       setAdminSuccess(`Administrator of ${labelFor(bands, adminBandId, 'name')} set to ${userLabelFor(users, adminUserId)}.`)
       setAdminUserId('')
+      await refreshIfSelf(newAdminId)
     } catch (err) {
       setAdminError(errMsg(err, 'Failed to set administrator.'))
     }
