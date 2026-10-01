@@ -35,6 +35,19 @@ export function BandProvider({ children }) {
   // Re-derive bands/role and re-validate the persisted current band whenever the
   // token changes (login, refresh, membership change).
   useEffect(() => {
+    // No token yet: this is the pre-auth window on a hard refresh, BEFORE
+    // AuthContext's silent /auth/refresh completes. We must NOT touch the
+    // persisted currentBandId here — clearing it would wipe the user's
+    // selection before the real token (with bands[]) arrives, causing the band
+    // to reset on every hard refresh. Leave bands empty and wait for the token;
+    // the persisted id is restored on the next run once the token is present.
+    if (!token) {
+      setBands([])
+      setRole(undefined)
+      setCurrentBandState(null)
+      return
+    }
+
     const { bands: nextBands, role: nextRole } = decodeTokenClaims(token)
     setBands(nextBands)
     setRole(nextRole)

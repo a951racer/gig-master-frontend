@@ -252,3 +252,55 @@ describe('BandContext — band selection logic (property-style)', () => {
     }
   })
 })
+
+// Regression: hard-refresh must not reset the current band.
+//
+// On a hard refresh, BandProvider's effect first runs with token === null (the
+// pre-auth window, before AuthContext's silent /auth/refresh completes). It must
+// NOT clear the persisted currentBandId during that window, otherwise the user's
+// selection is wiped before the real token arrives and the band resets.
+describe('hard-refresh current-band persistence (pre-auth window)', () => {
+  const bands = [
+    { id: 'b1', name: 'Alpha', isAdmin: false },
+    { id: 'b2', name: 'Beta', isAdmin: true },
+  ]
+
+  it('does not clear the persisted band while the token is null', () => {
+    localStorage.clear()
+    localStorage.setItem(CURRENT_BAND_ID_KEY, 'b2')
+
+    // Mount in the pre-auth window: no token yet.
+    authState.token = null
+    renderWithToken(null)
+
+    // The persisted selection must survive the token-less render.
+    expect(localStorage.getItem(CURRENT_BAND_ID_KEY)).toBe('b2')
+    // And we're in a neutral (no-band) UI state while waiting for the token.
+    expect(readCurrentBand()).toBeNull()
+  })
+
+  it('restores the persisted band once the token arrives after the null window', () => {
+    localStorage.clear()
+    localStorage.setItem(CURRENT_BAND_ID_KEY, 'b2')
+
+    // 1) Pre-auth render with no token.
+    authState.token = null
+    const { rerender } = renderWithToken(null)
+    expect(localStorage.getItem(CURRENT_BAND_ID_KEY)).toBe('b2')
+
+    // 2) Silent refresh completes: the real token (with bands[]) arrives.
+    authState.token = makeToken({ role: 'user', bands })
+    rerender(
+      <BandProvider>
+        <BandProbe />
+      </BandProvider>
+    )
+
+    // The user's previously-selected band (b2) is restored, not reset to the
+    // first alphabetical (b1).
+    const current = readCurrentBand()
+    expect(current).not.toBeNull()
+    expect(current.id).toBe('b2')
+    expect(localStorage.getItem(CURRENT_BAND_ID_KEY)).toBe('b2')
+  })
+})
