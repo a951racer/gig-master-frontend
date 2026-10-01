@@ -29,6 +29,15 @@ vi.mock('../../auth/BandContext', () => ({
   useBand: () => ({ role: mockRole }),
 }))
 
+// BandAdminListPage consumes useAuth() for the current user id + in-place
+// refresh (used to update the NavBar switcher after a self-affecting membership
+// change). Drive both via mutable holders.
+let mockAuthUser
+const refreshMock = vi.fn()
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({ user: mockAuthUser, refresh: refreshMock }),
+}))
+
 import UserListPage from './users/UserListPage'
 import BandAdminListPage from './bands/BandAdminListPage'
 import SeedGenreListPage from './seed-genres/SeedGenreListPage'
@@ -55,6 +64,8 @@ const renderWithRouter = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>)
 beforeEach(() => {
   vi.clearAllMocks()
   mockRole = undefined
+  mockAuthUser = { id: 'current-admin' }
+  refreshMock.mockResolvedValue(undefined)
   listUsers.mockResolvedValue({ data: [] })
   listBands.mockResolvedValue({ data: [] })
 })
@@ -455,6 +466,103 @@ describe('BandAdminListPage as system_administrator (Req 18.2)', () => {
     await user.selectOptions(membersSelect, 'b-1')
 
     expect(await screen.findByText(/band not found/i)).toBeInTheDocument()
+  })
+})
+
+// Self-membership refresh: when a sysadmin changes their OWN band membership
+// from the Bands page, their token is refreshed in place so the NavBar switcher
+// updates without a hard reload. Actions affecting other users don't refresh.
+describe('BandAdminListPage self-membership refresh', () => {
+  beforeEach(() => {
+    mockRole = 'system_administrator'
+    mockAuthUser = { id: 'me' }
+    listUsers.mockResolvedValue({
+      data: [
+        { id: 'me', email: 'me@band.com', role: 'system_administrator' },
+        { id: 'other', email: 'other@band.com', role: 'user' },
+      ],
+    })
+    listBands.mockResolvedValue({
+      data: [{ id: 'b-1', name: 'The Night Owls' }],
+    })
+  })
+
+  it('refreshes the session when the admin creates a band with THEMSELVES as administrator', async () => {
+    const user = userEvent.setup()
+    createBand.mockResolvedValueOnce({ data: { id: 'b-new', name: 'My Band' } })
+
+    renderWithRouter(<BandAdminListPage />)
+
+    await user.type(screen.getByPlaceholderText(/^band name$/i), 'My Band')
+    const adminSelect = await screen.findByLabelText('Create band administrator')
+    await user.selectOptions(adminSelect, 'me')
+    await user.click(screen.getByRole('button', { name: /create band/i }))
+
+    await waitFor(() => expect(createBand).toHaveBeenCalled())
+    await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1))
+  })
+
+  it('does NOT refresh when the admin creates a band for ANOTHER user', async () => {
+    const user = userEvent.setup()
+    createBand.mockResolvedValueOnce({ data: { id: 'b-new', name: 'Their Band' } })
+
+    renderWithRouter(<BandAdminListPage />)
+
+    await user.type(screen.getByPlaceholderText(/^band name$/i), 'Their Band')
+    const adminSelect = await screen.findByLabelText('Create band administrator')
+    await user.selectOptions(adminSelect, 'other')
+    await user.click(screen.getByRole('button', { name: /create band/i }))
+
+    await waitFor(() => expect(createBand).toHaveBeenCalled())
+    expect(refreshMock).not.toHaveBeenCalled()
+  })
+
+  it('refreshes when the admin adds THEMSELVES as a member', async () => {
+    const user = userEvent.setup()
+    addBandMember.mockResolvedValueOnce({ data: {} })
+
+    renderWithRouter(<BandAdminListPage />)
+
+    const bandSelect = await screen.findByLabelText('Add member band')
+    await user.selectOptions(bandSelect, 'b-1')
+    const userSelect = await screen.findByLabelText('Add member user')
+    await user.selectOptions(userSelect, 'me')
+    await user.click(screen.getByRole('button', { name: /add member/i }))
+
+    await waitFor(() => expect(addBandMember).toHaveBeenCalledWith('b-1', 'me'))
+    await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1))
+  })
+
+  it('does NOT refresh when the admin adds ANOTHER user as a member', async () => {
+    const user = userEvent.setup()
+    addBandMember.mockResolvedValueOnce({ data: {} })
+
+    renderWithRouter(<BandAdminListPage />)
+
+    const bandSelect = await screen.findByLabelText('Add member band')
+    await user.selectOptions(bandSelect, 'b-1')
+    const userSelect = await screen.findByLabelText('Add member user')
+    await user.selectOptions(userSelect, 'other')
+    await user.click(screen.getByRole('button', { name: /add member/i }))
+
+    await waitFor(() => expect(addBandMember).toHaveBeenCalledWith('b-1', 'other'))
+    expect(refreshMock).not.toHaveBeenCalled()
+  })
+
+  it('refreshes when the admin sets THEMSELVES as a band administrator', async () => {
+    const user = userEvent.setup()
+    setBandAdministrator.mockResolvedValueOnce({ data: {} })
+
+    renderWithRouter(<BandAdminListPage />)
+
+    const bandSelect = await screen.findByLabelText('Set administrator band')
+    await user.selectOptions(bandSelect, 'b-1')
+    const userSelect = await screen.findByLabelText('Set administrator user')
+    await user.selectOptions(userSelect, 'me')
+    await user.click(screen.getByRole('button', { name: /set administrator/i }))
+
+    await waitFor(() => expect(setBandAdministrator).toHaveBeenCalledWith('b-1', 'me'))
+    await waitFor(() => expect(refreshMock).toHaveBeenCalledTimes(1))
   })
 })
 
