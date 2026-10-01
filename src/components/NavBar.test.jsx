@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { render, screen, fireEvent, within } from '@testing-library/react'
+import { render, screen, fireEvent, within, waitFor } from '@testing-library/react'
 import { MemoryRouter } from 'react-router-dom'
 import NavBar from './NavBar'
 import { useAuth } from '../auth/AuthContext'
@@ -21,6 +21,10 @@ vi.mock('../api/axiosInstance', () => ({
 
 // Default truthy user so NavBar always renders (it returns null with no user).
 const defaultUser = { id: 'u1', email: 'user@example.com' }
+// Default profile (loaded from GET /auth/me in real AuthContext) with names.
+const defaultProfile = { firstName: 'Jane', lastName: 'Doe', email: 'user@example.com' }
+// Shared logout mock so the menu's Logout action can be asserted.
+let logoutMock
 
 // Sensible no-band-ish defaults; individual tests override via setBand().
 const defaultBandValue = {
@@ -45,7 +49,8 @@ function renderNavBar() {
 
 beforeEach(() => {
   vi.clearAllMocks()
-  vi.mocked(useAuth).mockReturnValue({ user: defaultUser, token: 'valid.jwt.token', logout: vi.fn() })
+  logoutMock = vi.fn()
+  vi.mocked(useAuth).mockReturnValue({ user: defaultUser, token: 'valid.jwt.token', profile: defaultProfile, logout: logoutMock })
   setBand()
 })
 
@@ -197,6 +202,79 @@ describe('NavBar', () => {
 
       expect(setCurrentBand).toHaveBeenCalledWith('b2')
       expect(setCurrentBandId).toHaveBeenCalledWith('b2')
+    })
+  })
+
+  // #58: the user identity + account dropdown (Edit Profile / Logout).
+  describe('user menu', () => {
+    it('shows the current user name (First Last) and no standalone Profile/Logout', () => {
+      renderNavBar()
+
+      // The toggle shows the display name from the profile.
+      expect(screen.getByRole('button', { name: /jane doe/i })).toBeInTheDocument()
+      // The old standalone Profile link and Logout button are gone.
+      expect(screen.queryByRole('link', { name: /^profile$/i })).not.toBeInTheDocument()
+      // The menu is closed initially (no menu items visible).
+      expect(screen.queryByRole('menuitem', { name: /edit profile/i })).not.toBeInTheDocument()
+    })
+
+    it('falls back to email when the profile has no names', () => {
+      vi.mocked(useAuth).mockReturnValue({
+        user: defaultUser,
+        token: 'valid.jwt.token',
+        profile: { firstName: '', lastName: '', email: 'noname@example.com' },
+        logout: logoutMock,
+      })
+      renderNavBar()
+      expect(screen.getByRole('button', { name: /noname@example.com/i })).toBeInTheDocument()
+    })
+
+    it('opens the dropdown with Edit Profile and Logout, with aria-expanded', () => {
+      renderNavBar()
+      const toggle = screen.getByRole('button', { name: /jane doe/i })
+      expect(toggle).toHaveAttribute('aria-expanded', 'false')
+
+      fireEvent.click(toggle)
+
+      expect(toggle).toHaveAttribute('aria-expanded', 'true')
+      expect(screen.getByRole('menuitem', { name: /edit profile/i })).toBeInTheDocument()
+      expect(screen.getByRole('menuitem', { name: /logout/i })).toBeInTheDocument()
+    })
+
+    it('Logout menu item calls logout', async () => {
+      renderNavBar()
+      fireEvent.click(screen.getByRole('button', { name: /jane doe/i }))
+      fireEvent.click(screen.getByRole('menuitem', { name: /logout/i }))
+      await waitFor(() => expect(logoutMock).toHaveBeenCalledTimes(1))
+    })
+
+    it('closes on Escape', () => {
+      renderNavBar()
+      fireEvent.click(screen.getByRole('button', { name: /jane doe/i }))
+      expect(screen.getByRole('menuitem', { name: /edit profile/i })).toBeInTheDocument()
+
+      fireEvent.keyDown(document, { key: 'Escape' })
+
+      expect(screen.queryByRole('menuitem', { name: /edit profile/i })).not.toBeInTheDocument()
+    })
+
+    it('closes on outside click', () => {
+      renderNavBar()
+      fireEvent.click(screen.getByRole('button', { name: /jane doe/i }))
+      expect(screen.getByRole('menuitem', { name: /edit profile/i })).toBeInTheDocument()
+
+      // Click outside the menu (document body).
+      fireEvent.mouseDown(document.body)
+
+      expect(screen.queryByRole('menuitem', { name: /edit profile/i })).not.toBeInTheDocument()
+    })
+
+    it('Edit Profile menu item closes the menu (navigates to /profile)', () => {
+      renderNavBar()
+      fireEvent.click(screen.getByRole('button', { name: /jane doe/i }))
+      fireEvent.click(screen.getByRole('menuitem', { name: /edit profile/i }))
+      // Menu closes after selecting an item.
+      expect(screen.queryByRole('menuitem', { name: /edit profile/i })).not.toBeInTheDocument()
     })
   })
 })

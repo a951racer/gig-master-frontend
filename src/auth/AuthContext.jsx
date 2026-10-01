@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react'
-import { refresh as refreshApi, login as loginApi, logout as logoutApi } from '../api/auth'
+import { refresh as refreshApi, login as loginApi, logout as logoutApi, getMe } from '../api/auth'
 import { setAccessToken, clearAccessToken } from '../api/axiosInstance'
 
 const AuthContext = createContext(null)
@@ -8,6 +8,12 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null)
   const [token, setToken] = useState(null)
   const [isLoading, setIsLoading] = useState(true)
+  // The current user's profile ({ firstName, lastName, email }), loaded from
+  // GET /auth/me. Needed for display (e.g. the NavBar user menu) because names
+  // are NOT in the JWT, so AuthContext.user (derived from the token after a
+  // silent refresh) only has the id. Kept in sync with `token` via the effect
+  // below so it is correct after mount, login, and in-place refresh.
+  const [profile, setProfile] = useState(null)
 
   // On mount, attempt silent refresh to restore session
   useEffect(() => {
@@ -31,6 +37,28 @@ export function AuthProvider({ children }) {
       })
       .finally(() => setIsLoading(false))
   }, [])
+
+  // Load the current user's profile whenever we have a token (and clear it when
+  // we don't). Centralizes the GET /auth/me fetch so consumers get a reliable
+  // name/email across mount, login, and refresh without each wiring it up.
+  useEffect(() => {
+    let active = true
+    if (!token) {
+      setProfile(null)
+      return
+    }
+    getMe()
+      .then((res) => {
+        if (active) setProfile(res.data)
+      })
+      .catch(() => {
+        // Non-fatal: the menu falls back to any email it has, or shows nothing.
+        if (active) setProfile(null)
+      })
+    return () => {
+      active = false
+    }
+  }, [token])
 
   const login = async (email, password) => {
     const res = await loginApi(email, password)
@@ -70,10 +98,11 @@ export function AuthProvider({ children }) {
     clearAccessToken()
     setToken(null)
     setUser(null)
+    setProfile(null)
   }
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoading, login, logout, refresh }}>
+    <AuthContext.Provider value={{ user, token, isLoading, profile, login, logout, refresh }}>
       {children}
     </AuthContext.Provider>
   )

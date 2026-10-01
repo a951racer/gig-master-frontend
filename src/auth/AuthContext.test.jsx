@@ -7,6 +7,7 @@ vi.mock('../api/auth', () => ({
   refresh: vi.fn(),
   login: vi.fn(),
   logout: vi.fn(),
+  getMe: vi.fn(),
 }))
 
 // Stub the axios token setters so no real axios runs. Back setCurrentBandId with
@@ -24,7 +25,7 @@ vi.mock('../api/axiosInstance', () => ({
 
 import { AuthProvider, useAuth } from './AuthContext'
 import { BandProvider, useBand } from './BandContext'
-import { refresh as refreshApi } from '../api/auth'
+import { refresh as refreshApi, getMe } from '../api/auth'
 
 // Build a fake JWT whose middle segment base64-decodes to the given claims,
 // matching how AuthContext/BandContext decode (atob of the payload segment).
@@ -37,6 +38,8 @@ function makeToken({ sub = 'u1', role = 'user', bands = [] } = {}) {
 // Install a minimal in-memory localStorage (jsdom here has none persistent),
 // shared with the setCurrentBandId mock above.
 beforeEach(() => {
+  // Default profile fetch resolution; individual tests may override.
+  getMe.mockResolvedValue({ data: { firstName: '', lastName: '', email: 'me@band.com' } })
   store.clear()
   Object.defineProperty(globalThis, 'localStorage', {
     configurable: true,
@@ -58,13 +61,14 @@ afterEach(() => {
 // can trigger a refresh and assert the band switcher data updated with no reload.
 let doRefresh
 function Probe() {
-  const { refresh, token } = useAuth()
+  const { refresh, token, profile } = useAuth()
   const { bands } = useBand()
   doRefresh = refresh
   return (
     <div>
       <span data-testid="token">{token || ''}</span>
       <span data-testid="bands">{JSON.stringify(bands)}</span>
+      <span data-testid="profile">{JSON.stringify(profile)}</span>
     </div>
   )
 }
@@ -128,5 +132,46 @@ describe('AuthContext in-place refresh (#44)', () => {
       result = await doRefresh()
     })
     expect(result).toBeNull()
+  })
+})
+
+describe('AuthContext profile (#58)', () => {
+  it('loads the current user profile from GET /auth/me when a token is present', async () => {
+    refreshApi.mockResolvedValueOnce({ data: { accessToken: makeToken() } })
+    getMe.mockResolvedValueOnce({
+      data: { firstName: 'Jane', lastName: 'Doe', email: 'jane@band.com' },
+    })
+
+    render(
+      <AuthProvider>
+        <BandProvider>
+          <Probe />
+        </BandProvider>
+      </AuthProvider>
+    )
+
+    await waitFor(() => {
+      const profile = JSON.parse(screen.getByTestId('profile').textContent)
+      expect(profile).toEqual({ firstName: 'Jane', lastName: 'Doe', email: 'jane@band.com' })
+    })
+  })
+
+  it('leaves profile null when the profile fetch fails (non-fatal)', async () => {
+    refreshApi.mockResolvedValueOnce({ data: { accessToken: makeToken() } })
+    getMe.mockRejectedValueOnce(new Error('boom'))
+
+    render(
+      <AuthProvider>
+        <BandProvider>
+          <Probe />
+        </BandProvider>
+      </AuthProvider>
+    )
+
+    // Token is set (session restored) but profile stays null on fetch failure.
+    await waitFor(() => expect(screen.getByTestId('token').textContent).not.toBe(''))
+    await waitFor(() => {
+      expect(JSON.parse(screen.getByTestId('profile').textContent || 'null')).toBeNull()
+    })
   })
 })
