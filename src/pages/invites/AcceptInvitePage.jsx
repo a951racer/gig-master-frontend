@@ -2,7 +2,7 @@ import { useEffect, useState, useCallback, useRef } from 'react'
 import { useSearchParams, Link } from 'react-router-dom'
 import { getInvite, acceptInvite } from '../../api/invites'
 import { useAuth } from '../../auth/AuthContext'
-import { refreshMembershipAndGo } from '../bands/refreshMembership'
+import { useRefreshMembership } from '../bands/refreshMembership'
 
 // Accept-invite landing page at /invites/accept?token=...
 //
@@ -25,6 +25,7 @@ export default function AcceptInvitePage() {
   const [searchParams] = useSearchParams()
   const token = searchParams.get('token') || ''
   const { token: authToken, isLoading: authLoading } = useAuth()
+  const refreshMembershipAndGo = useRefreshMembership()
   const isLoggedIn = Boolean(authToken)
 
   const [invite, setInvite] = useState(null)

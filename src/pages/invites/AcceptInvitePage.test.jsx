@@ -14,13 +14,13 @@ vi.mock('../../auth/AuthContext', () => ({
   useAuth: () => mockAuth,
 }))
 
+const refreshMembershipAndGo = vi.fn()
 vi.mock('../bands/refreshMembership', () => ({
-  refreshMembershipAndGo: vi.fn(),
+  useRefreshMembership: () => refreshMembershipAndGo,
 }))
 
 import AcceptInvitePage from './AcceptInvitePage'
 import { getInvite, acceptInvite } from '../../api/invites'
-import { refreshMembershipAndGo } from '../bands/refreshMembership'
 
 const renderAt = (token = 'raw-token') =>
   render(

@@ -10,10 +10,10 @@ vi.mock('../../api/bands', () => ({
   renameBand: vi.fn(),
 }))
 
-// BandAdminPage's "Band settings" section uses the membership refresh helper,
-// which triggers /auth/refresh and a full-page navigation; stub it out.
+// BandAdminPage's "Band settings" section uses the membership refresh hook;
+// stub it so no /auth/refresh or navigation happens.
 vi.mock('../bands/refreshMembership', () => ({
-  refreshMembershipAndGo: vi.fn(),
+  useRefreshMembership: () => vi.fn(),
 }))
 
 // Mock the genres API layer (genre editor) so no network happens.

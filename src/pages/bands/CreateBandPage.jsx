@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { createBand } from '../../api/bands'
-import { refreshMembershipAndGo } from './refreshMembership'
+import { useRefreshMembership } from './refreshMembership'
 
 const inputCls =
   'w-full bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2.5 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
@@ -11,6 +11,7 @@ const inputCls =
 // by refreshing the session token so its bands[] includes the new band, then
 // selecting it and navigating to the songs view.
 export default function CreateBandPage() {
+  const refreshMembershipAndGo = useRefreshMembership()
   const [name, setName] = useState('')
   const [error, setError] = useState('')
   const [submitting, setSubmitting] = useState(false)

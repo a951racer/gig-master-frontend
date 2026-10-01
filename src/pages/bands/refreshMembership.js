@@ -1,39 +1,47 @@
-import { refresh as refreshApi } from '../../api/auth'
-import { setAccessToken, setCurrentBandId } from '../../api/axiosInstance'
+import { useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
+import { useAuth } from '../../auth/AuthContext'
+import { setCurrentBandId } from '../../api/axiosInstance'
 
-// Refresh the session so a membership change (band created, join approved)
-// appears in the token's bands[] and the band becomes selectable (Req 7.1,
-// 7.2, 16.1, 16.4).
+// useRefreshMembership — in-place membership refresh (replaces the old
+// full-page-reload workaround).
 //
-// AuthContext limitation: AuthContext exposes only { user, token, isLoading,
-// login, logout } — there is no setter to push a freshly-refreshed token into
-// its `token` state, and BandContext derives `bands`/`role` from that state.
-// So calling /auth/refresh here alone would update the axios access token but
-// NOT the React-side bands[] until the next silent refresh (AuthContext's mount
-// effect) runs. To make the new/joined band reliably selectable right away, we
-// fetch the refreshed token, store it for outgoing requests, optionally select
-// the target band, then trigger a full-page navigation. AuthContext re-mounts,
-// runs its own silent refresh, and BandContext re-derives bands[] from the new
-// token — after which the band is selectable in the switcher.
-export async function refreshMembershipAndGo(destination, { selectBandId } = {}) {
-  try {
-    const res = await refreshApi()
-    const newToken = res?.data?.accessToken
-    if (newToken) {
-      setAccessToken(newToken)
-    }
-  } catch {
-    // If the refresh call fails we still navigate; AuthContext's mount-time
-    // silent refresh is the backstop for syncing bands[].
-  }
+// After a membership-changing action (create band, join approved, band rename,
+// invite accept) the JWT bands[] claim is stale. This hook refreshes the token
+// IN PLACE via AuthContext.refresh() — which pushes the new token into
+// AuthContext state, so BandContext re-derives bands[]/role without a reload —
+// then navigates with the router (no window.location.assign).
+//
+// Band selection: when selectBandId is given, we persist it (setCurrentBandId)
+// BEFORE refreshing, so when BandContext's effect runs against the new token it
+// validates that persisted id against the fresh bands[] and restores it as the
+// current band. This avoids a race with BandContext not having re-derived yet.
+export function useRefreshMembership() {
+  const { refresh } = useAuth()
+  const navigate = useNavigate()
 
-  if (selectBandId) {
-    // Persist the selection so the switcher restores it once BandContext
-    // re-derives bands[] from the refreshed token after reload.
-    setCurrentBandId(selectBandId)
-  }
+  return useCallback(
+    async (destination, { selectBandId } = {}) => {
+      if (selectBandId) {
+        // Persist the intended selection first; BandContext restores it from
+        // localStorage once it re-derives bands[] from the refreshed token.
+        setCurrentBandId(selectBandId)
+      }
 
-  // Full-page navigation so AuthContext/BandContext re-derive from the fresh
-  // token (see limitation note above).
-  window.location.assign(destination)
+      try {
+        await refresh()
+      } catch {
+        // If the in-place refresh fails, fall back to a full navigation so
+        // AuthContext's mount-time silent refresh re-syncs bands[]. (The axios
+        // 401 interceptor is the ultimate backstop.)
+        window.location.assign(destination)
+        return
+      }
+
+      // In-place client-side navigation — AuthContext/BandContext have already
+      // re-derived from the fresh token, so no reload is needed.
+      navigate(destination)
+    },
+    [refresh, navigate]
+  )
 }

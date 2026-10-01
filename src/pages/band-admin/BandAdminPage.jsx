@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
 import { useBand } from '../../auth/BandContext'
 import { renameBand } from '../../api/bands'
-import { refreshMembershipAndGo } from '../bands/refreshMembership'
+import { useRefreshMembership } from '../bands/refreshMembership'
 
 const inputCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
 
@@ -62,6 +62,7 @@ export default function BandAdminPage() {
 // the band name is embedded in the JWT bands[] claim, on success we refresh the
 // session (refreshMembershipAndGo) so the NavBar switcher shows the new name.
 function BandSettings({ currentBand }) {
+  const refreshMembershipAndGo = useRefreshMembership()
   const [name, setName] = useState(currentBand.name)
   const [error, setError] = useState(null)
   const [saving, setSaving] = useState(false)

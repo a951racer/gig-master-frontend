@@ -10,10 +10,11 @@ vi.mock('../../api/bands', () => ({
   listMyJoinRequests: vi.fn(),
 }))
 
-// Mock the membership refresh helper — it triggers /auth/refresh and a
-// full-page navigation (window.location.assign); we only assert it's called.
+// Mock the membership refresh hook. useRefreshMembership() returns the async
+// go-to-band function; a single stable mock lets us assert calls across renders.
+const refreshMembershipAndGo = vi.fn()
 vi.mock('./refreshMembership', () => ({
-  refreshMembershipAndGo: vi.fn(),
+  useRefreshMembership: () => refreshMembershipAndGo,
 }))
 
 // JoinRequestsPage imports setCurrentBandId from axiosInstance; stub it so no
@@ -35,13 +36,12 @@ import CreateBandPage from './CreateBandPage'
 import JoinBandPage from './JoinBandPage'
 import JoinRequestsPage from './JoinRequestsPage'
 import { createBand, requestToJoin, listMyJoinRequests } from '../../api/bands'
-import { refreshMembershipAndGo } from './refreshMembership'
 
 const renderWithRouter = (ui) => render(<MemoryRouter>{ui}</MemoryRouter>)
 
-// JoinRequestsPage's direct-select path calls window.location.assign, which
-// jsdom does not implement (it logs a harmless "Not implemented: navigation"
-// notice). Replace location with a stub so the tested logic runs quietly.
+// The membership refresh hook has a window.location.assign fallback (only hit
+// if the in-place refresh throws); jsdom doesn't implement navigation, so stub
+// location to keep any fallback path quiet.
 const originalLocation = window.location
 beforeAll(() => {
   delete window.location
@@ -53,6 +53,7 @@ afterAll(() => {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  refreshMembershipAndGo.mockReset()
   mockBands = []
 })
 
