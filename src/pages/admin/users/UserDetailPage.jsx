@@ -206,18 +206,14 @@ function Memberships({ user, onChanged }) {
   const columns = [
     { key: 'name', header: 'Band' },
     {
-      key: 'role',
-      header: '',
-      className: 'w-24',
-      render: (b) => (b.isAdmin ? <span className="text-xs font-medium text-purple-200 bg-purple-800/60 rounded-full px-2 py-0.5">Admin</span> : null),
-    },
-    {
+      // Single indicator per row: the band administrator shows an Admin badge;
+      // other memberships show a Remove action.
       key: 'actions',
       header: '',
-      className: 'w-24 text-right',
+      className: 'w-28 text-right',
       render: (b) =>
         b.isAdmin ? (
-          <span className="text-xs text-gray-500">admin</span>
+          <span className="text-xs font-medium text-purple-200 bg-purple-800/60 rounded-full px-2 py-0.5">Admin</span>
         ) : (
           <button onClick={() => handleRemove(b.id)} disabled={pending} className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50 px-2 py-1">
             Remove
