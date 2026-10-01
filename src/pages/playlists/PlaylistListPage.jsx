@@ -34,19 +34,15 @@ export default function PlaylistListPage() {
 
   // Copy a playlist: fetch the source's songs, then create a new playlist with
   // the chosen name/description and the same songs (one atomic POST), and open
-  // the new playlist.
+  // the new playlist. Throws on failure so the modal can surface the message
+  // in-dialog (e.g. a duplicate-name 409) and let the user fix the name.
   const handleCopy = async ({ name, description }) => {
     const source = copySource
-    try {
-      const res = await getPlaylist(source._id)
-      const songIds = (res.data.songs || []).map(sg => (typeof sg === 'string' ? sg : sg._id))
-      const created = await createPlaylist({ name, description, songs: songIds })
-      setCopySource(null)
-      navigate(`/playlists/${created.data._id}`)
-    } catch {
-      setError('Failed to copy playlist')
-      setCopySource(null)
-    }
+    const res = await getPlaylist(source._id)
+    const songIds = (res.data.songs || []).map(sg => (typeof sg === 'string' ? sg : sg._id))
+    const created = await createPlaylist({ name, description, songs: songIds })
+    setCopySource(null)
+    navigate(`/playlists/${created.data._id}`)
   }
 
   if (hasNoBand) {
@@ -123,7 +119,8 @@ export default function PlaylistListPage() {
 // description. The songs are carried over by the parent on confirm.
 function CopyPlaylistModal({ source, onCopy, onCancel }) {
   const [name, setName] = useState(`Copy of ${source.name}`)
-  const [description, setDescription] = useState(source.description || '')
+  // A copied playlist is flagged as a duplicate in its description.
+  const [description, setDescription] = useState('** Duplicate **')
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
 
@@ -136,6 +133,13 @@ function CopyPlaylistModal({ source, onCopy, onCancel }) {
     setSaving(true)
     try {
       await onCopy({ name: name.trim(), description: description.trim() })
+    } catch (err) {
+      const code = err?.response?.data?.error?.code
+      if (code === 'DUPLICATE_NAME') {
+        setError('Playlist names must be unique within your band. Please choose a different name.')
+      } else {
+        setError(err?.response?.data?.error?.message || 'Failed to copy playlist.')
+      }
     } finally {
       setSaving(false)
     }

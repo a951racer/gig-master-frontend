@@ -50,7 +50,8 @@ describe('PlaylistListPage copy (#2)', () => {
     await user.click(screen.getByRole('button', { name: /copy/i }))
     const dialog = await screen.findByRole('dialog')
     expect(within(dialog).getByLabelText(/new playlist name/i)).toHaveValue('Copy of Summer Set')
-    expect(within(dialog).getByLabelText(/new playlist description/i)).toHaveValue('Outdoor gigs')
+    // A copy's description is flagged as a duplicate, not the source's text.
+    expect(within(dialog).getByLabelText(/new playlist description/i)).toHaveValue('** Duplicate **')
   })
 
   it('copying fetches the source songs and creates a new playlist, then navigates to it', async () => {
@@ -71,7 +72,7 @@ describe('PlaylistListPage copy (#2)', () => {
     await waitFor(() => {
       expect(createPlaylist).toHaveBeenCalledWith({
         name: 'Copy of Summer Set',
-        description: 'Outdoor gigs',
+        description: '** Duplicate **',
         songs: ['s1', 's2'],
       })
     })
@@ -110,5 +111,22 @@ describe('PlaylistListPage copy (#2)', () => {
 
     expect(await within(dialog).findByText(/name is required/i)).toBeInTheDocument()
     expect(createPlaylist).not.toHaveBeenCalled()
+  })
+
+  it('shows a friendly message when copying to a duplicate name (409)', async () => {
+    const user = userEvent.setup()
+    getPlaylist.mockResolvedValueOnce({ data: { _id: 'p1', songs: ['s1'] } })
+    createPlaylist.mockRejectedValueOnce({ response: { data: { error: { code: 'DUPLICATE_NAME' } } } })
+
+    renderPage()
+    await screen.findByText('Summer Set')
+    await user.click(screen.getByRole('button', { name: /copy/i }))
+
+    const dialog = await screen.findByRole('dialog')
+    await user.click(within(dialog).getByRole('button', { name: /copy playlist/i }))
+
+    expect(await within(dialog).findByText(/must be unique within your band/i)).toBeInTheDocument()
+    // The modal stays open so the user can rename.
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 })
