@@ -213,18 +213,14 @@ function MembersWidget({ band, members, users, onChanged, refreshIfSelf }) {
   const columns = [
     { key: 'name', header: 'Member', render: (m) => userLabel(m) },
     {
-      key: 'admin',
-      header: '',
-      className: 'w-24',
-      render: (m) => (m.isAdmin ? <span className="text-xs font-medium text-purple-200 bg-purple-800/60 rounded-full px-2 py-0.5">Admin</span> : null),
-    },
-    {
+      // Single indicator per row: the band administrator shows an Admin badge;
+      // other members show a Remove action.
       key: 'actions',
       header: '',
-      className: 'w-24 text-right',
+      className: 'w-28 text-right',
       render: (m) =>
         m.isAdmin ? (
-          <span className="text-xs text-gray-500">admin</span>
+          <span className="text-xs font-medium text-purple-200 bg-purple-800/60 rounded-full px-2 py-0.5">Admin</span>
         ) : (
           <button onClick={() => handleRemove(m.id || m._id)} disabled={pending} className="text-xs text-red-400 hover:text-red-300 disabled:opacity-50 px-2 py-1">
             Remove
