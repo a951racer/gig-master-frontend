@@ -1,5 +1,7 @@
+import { useState, useRef, useEffect } from 'react'
 import { Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../auth/AuthContext'
+import { userDisplayName } from '../constants/users'
 import { useBand } from '../auth/BandContext'
 import { setCurrentBandId } from '../api/axiosInstance'
 
@@ -12,7 +14,7 @@ const memberLinks = [
 ]
 
 export default function NavBar() {
-  const { user, token, logout } = useAuth()
+  const { user, token, profile, logout } = useAuth()
   const navigate = useNavigate()
   const { pathname } = useLocation()
 
@@ -120,19 +122,87 @@ export default function NavBar() {
         </label>
       )}
 
-      <Link
-        to="/profile"
-        className={linkClass(pathname.startsWith('/profile'))}
-      >
-        Profile
-      </Link>
-
-      <button
-        onClick={handleLogout}
-        className="text-sm text-gray-400 hover:text-white transition-colors px-3 py-1.5 rounded hover:bg-red-900/40"
-      >
-        Logout
-      </button>
+      <UserMenu
+        label={userDisplayName(profile) || profile?.email || 'Account'}
+        onEditProfile={() => navigate('/profile')}
+        onLogout={handleLogout}
+      />
     </nav>
+  )
+}
+
+// User identity + account menu. Shows the current user's name (email fallback)
+// as a toggle button; clicking opens a dropdown with Edit Profile and Logout.
+// Closes on outside-click and Escape, and is keyboard-accessible
+// (aria-haspopup/aria-expanded on the button; focusable menu items).
+function UserMenu({ label, onEditProfile, onLogout }) {
+  const [open, setOpen] = useState(false)
+  const containerRef = useRef(null)
+
+  // Close on outside-click and Escape while open.
+  useEffect(() => {
+    if (!open) return
+    const onDocClick = (e) => {
+      if (containerRef.current && !containerRef.current.contains(e.target)) {
+        setOpen(false)
+      }
+    }
+    const onKeyDown = (e) => {
+      if (e.key === 'Escape') setOpen(false)
+    }
+    document.addEventListener('mousedown', onDocClick)
+    document.addEventListener('keydown', onKeyDown)
+    return () => {
+      document.removeEventListener('mousedown', onDocClick)
+      document.removeEventListener('keydown', onKeyDown)
+    }
+  }, [open])
+
+  const itemCls =
+    'block w-full text-left px-4 py-2 text-sm text-gray-200 hover:bg-purple-900/40 hover:text-white transition-colors'
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={() => setOpen((v) => !v)}
+        aria-haspopup="menu"
+        aria-expanded={open}
+        className="flex items-center gap-1 text-sm text-gray-200 hover:text-white transition-colors px-3 py-1.5 rounded hover:bg-purple-900/40"
+      >
+        <span className="max-w-[12rem] truncate">{label}</span>
+        <span aria-hidden="true" className="text-xs text-gray-400">▾</span>
+      </button>
+
+      {open && (
+        <div
+          role="menu"
+          className="absolute right-0 mt-2 w-44 bg-[#2a2640] border border-purple-900/60 rounded-lg shadow-2xl py-1 z-50"
+        >
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false)
+              onEditProfile()
+            }}
+            className={itemCls}
+          >
+            Edit Profile
+          </button>
+          <button
+            type="button"
+            role="menuitem"
+            onClick={() => {
+              setOpen(false)
+              onLogout()
+            }}
+            className={itemCls}
+          >
+            Logout
+          </button>
+        </div>
+      )}
+    </div>
   )
 }
