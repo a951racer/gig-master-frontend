@@ -40,7 +40,9 @@ const AcceptInvitePage = lazy(() => import('../pages/invites/AcceptInvitePage'))
 // Sysadmin pages (self-gate on role === 'system_administrator')
 const AdminPage = lazy(() => import('../pages/admin/AdminPage'))
 const UserListPage = lazy(() => import('../pages/admin/users/UserListPage'))
+const UserDetailPage = lazy(() => import('../pages/admin/users/UserDetailPage'))
 const BandAdminListPage = lazy(() => import('../pages/admin/bands/BandAdminListPage'))
+const BandDetailPage = lazy(() => import('../pages/admin/bands/BandDetailPage'))
 const SeedGenreListPage = lazy(() => import('../pages/admin/seed-genres/SeedGenreListPage'))
 
 // Auth-aware fallback for unknown routes. Authenticated users go to the app
@@ -111,7 +113,9 @@ export default function AppRouter() {
               <Route path="/admin" element={<ProtectedRoute><AdminPage /></ProtectedRoute>}>
                 <Route index element={<Navigate to="/admin/users" replace />} />
                 <Route path="users" element={<UserListPage />} />
+                <Route path="users/:id" element={<UserDetailPage />} />
                 <Route path="bands" element={<BandAdminListPage />} />
+                <Route path="bands/:id" element={<BandDetailPage />} />
                 <Route path="seed-genres" element={<SeedGenreListPage />} />
               </Route>
 
