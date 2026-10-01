@@ -15,6 +15,11 @@ export const setUserRole = (id, role) =>
 export const updateUser = (id, data) =>
   api.patch(`/admin/users/${id}`, data)
 
+// Single user + band memberships (admin detail page) — GET /admin/users/:id
+//   → { id, email, firstName, lastName, role, bands: [{ id, name, isAdmin, archived }] }
+export const getUser = (id) =>
+  api.get(`/admin/users/${id}`)
+
 // Bands — GET/POST /admin/bands, POST /admin/bands/:id/members,
 //         PATCH /admin/bands/:id/administrator, PATCH /admin/bands/:id (rename)
 export const listBands = () =>
@@ -24,6 +29,10 @@ export const createBand = ({ name, administrator }) =>
 
 export const addBandMember = (bandId, userId) =>
   api.post(`/admin/bands/${bandId}/members`, { userId })
+
+// Remove a member from a band (#48) — DELETE /admin/bands/:id/members/:userId
+export const removeBandMember = (bandId, userId) =>
+  api.delete(`/admin/bands/${bandId}/members/${userId}`)
 
 // List any band's members (#sysadmin view) — GET /admin/bands/:id/members
 //   → [{ id, email, firstName, lastName, isAdmin }]
