@@ -152,7 +152,7 @@ function Column({ column, chordColor }) {
 }
 
 // Page 1 banner header: a block tinted from the chart's chord color (a light
-// 30%-opacity wash) with "Title [Key]" and "[Artist]".
+// 25%-opacity wash) with "Title [Key]" and the artist name (no brackets).
 function BannerHeader({ title, artist, keyLabel, chordColor }) {
   return (
     <div
@@ -162,28 +162,30 @@ function BannerHeader({ title, artist, keyLabel, chordColor }) {
       <div className="text-2xl font-bold text-gray-900 leading-tight">
         {title} [{keyLabel}]
       </div>
-      {artist ? <div className="text-base font-bold text-gray-700 leading-tight">[{artist}]</div> : null}
+      {artist ? <div className="text-base font-bold text-gray-700 leading-tight">{artist}</div> : null}
     </div>
   )
 }
 
-// Pages 2+ condensed header: smaller "Title [Key]", no shaded banner.
-function CondensedHeader({ title, keyLabel }) {
+// Pages 2+ condensed header: smaller "Title [Key]" on the left, a right-
+// justified "Page X of N" on the same row.
+function CondensedHeader({ title, keyLabel, pageNumber, totalPages }) {
   return (
-    <div className="mb-4 border-b border-gray-300 pb-2">
+    <div className="mb-4 border-b border-gray-300 pb-2 flex items-baseline justify-between gap-4">
       <div className="font-bold text-gray-900 leading-tight text-lg">
         {title} [{keyLabel}]
       </div>
+      <div className="text-sm text-gray-500 whitespace-nowrap">Page {pageNumber} of {totalPages}</div>
     </div>
   )
 }
 
 // A single virtual US-Letter page.
-function ChartPage({ page, index, title, artist, keyLabel, chordColor, columnGap }) {
+function ChartPage({ page, index, title, artist, keyLabel, chordColor, columnGap, bandName, totalPages }) {
   const columns = page.columns || []
   return (
     <div
-      className="bg-white text-gray-900 shadow-lg border border-gray-300"
+      className="relative bg-white text-gray-900 shadow-lg border border-gray-300"
       style={{
         width: `${PAGE_WIDTH}px`,
         minHeight: `${PAGE_HEIGHT}px`,
@@ -193,7 +195,7 @@ function ChartPage({ page, index, title, artist, keyLabel, chordColor, columnGap
       {index === 0 ? (
         <BannerHeader title={title} artist={artist} keyLabel={keyLabel} chordColor={chordColor} />
       ) : (
-        <CondensedHeader title={title} keyLabel={keyLabel} />
+        <CondensedHeader title={title} keyLabel={keyLabel} pageNumber={index + 1} totalPages={totalPages} />
       )}
 
       <div className="flex" style={{ gap: `${columnGap}px` }}>
@@ -201,6 +203,17 @@ function ChartPage({ page, index, title, artist, keyLabel, chordColor, columnGap
           <Column key={i} column={column} chordColor={chordColor} />
         ))}
       </div>
+
+      {/* Centered band-name footer, same on every page. Absolutely positioned
+          in the bottom padding/margin so it does not affect content height. */}
+      {bandName ? (
+        <div
+          className="absolute left-0 right-0 text-center text-xs text-gray-500"
+          style={{ bottom: '18px' }}
+        >
+          {bandName}
+        </div>
+      ) : null}
     </div>
   )
 }
@@ -253,7 +266,7 @@ function FitToWidth({ children }) {
 //                    centered (viewer).
 export default function ChartPages({ representation, fitToWidth = false }) {
   if (!representation) return null
-  const { title = '', artist = '', keyLabel = 'Numbers', formatting = {}, pages = [] } = representation
+  const { title = '', artist = '', bandName = '', keyLabel = 'Numbers', formatting = {}, pages = [] } = representation
 
   const chordColor = resolveChordColor(formatting.chordColor)
   const fontFamily =
@@ -276,6 +289,8 @@ export default function ChartPages({ representation, fitToWidth = false }) {
         keyLabel={keyLabel}
         chordColor={chordColor}
         columnGap={columnGap}
+        bandName={bandName}
+        totalPages={pages.length}
       />
     </div>
   ))

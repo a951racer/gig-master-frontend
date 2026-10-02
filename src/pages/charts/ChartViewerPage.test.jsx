@@ -132,14 +132,41 @@ describe('ChartViewerPage (#12)', () => {
   it('renders the title+key banner, artist, section header and chord-over-lyric segments from the pages', async () => {
     renderPage()
 
-    // Page 1 banner: "<title> [<keyLabel>]" and the artist in brackets.
+    // Page 1 banner: "<title> [<keyLabel>]" and the artist name (no brackets).
     expect(await screen.findByText(/Amazing Grace \[Numbers\]/)).toBeInTheDocument()
-    expect(screen.getByText('[John Newton]')).toBeInTheDocument()
+    expect(screen.getByText('John Newton')).toBeInTheDocument()
 
     // Section header (rendered from the page's header line) + chord-over-lyric.
     expect(screen.getByRole('heading', { name: /Verse 1/i })).toBeInTheDocument()
     expect(screen.getByText('ma')).toBeInTheDocument()
     expect(screen.getByText('zing grace')).toBeInTheDocument()
+  })
+
+  it('shows the band-name footer on each page and a right-justified page number on pages 2+', async () => {
+    // A two-page representation with a band name. Page 1 uses the banner (no
+    // page number); page 2 uses the condensed header with "Page 2 of 2".
+    viewChart.mockResolvedValueOnce({
+      data: {
+        title: 'Long One',
+        artist: 'The Writers',
+        bandName: 'Lonesome Dove',
+        keyLabel: 'Numbers',
+        formatting: { font: 'monospace', size: 11, chordColor: 'blue', columns: 1 },
+        pages: [
+          { columns: [ { lines: [ { header: { label: 'VERSE 1', repeat: null } } ] } ] },
+          { columns: [ { lines: [ { header: { label: 'VERSE 2', repeat: null } } ] } ] },
+        ],
+      },
+    })
+
+    renderPage()
+
+    // The band name footer appears once per page (2 pages → 2 occurrences).
+    await waitFor(() => expect(screen.getAllByText('Lonesome Dove').length).toBe(2))
+    // Page 2 carries a right-justified page indicator.
+    expect(screen.getByText('Page 2 of 2')).toBeInTheDocument()
+    // Page 1 (banner) does not show a page number.
+    expect(screen.queryByText('Page 1 of 2')).not.toBeInTheDocument()
   })
 
   it('renders a chord quality as superscript (degree stays unambiguous)', async () => {
