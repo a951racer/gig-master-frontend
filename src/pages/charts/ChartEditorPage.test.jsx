@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -10,6 +10,12 @@ vi.mock('../../api/charts', () => ({
   getChart: vi.fn(),
   previewChart: vi.fn(),
   saveChart: vi.fn(),
+}))
+
+// The editor also fetches the SONG for the read-only title/artist (independent
+// of whether a chart exists), so mock the songs API too.
+vi.mock('../../api/songs', () => ({
+  getSong: vi.fn(),
 }))
 
 // Band context: a band is selected (editing is band-scoped, R11.7).
@@ -32,6 +38,7 @@ vi.mock('react-router-dom', async (orig) => {
 
 import ChartEditorPage from './ChartEditorPage'
 import { getChart, previewChart, saveChart } from '../../api/charts'
+import { getSong } from '../../api/songs'
 
 const renderPage = () => render(<MemoryRouter><ChartEditorPage /></MemoryRouter>)
 
@@ -80,6 +87,7 @@ const PREVIEW_TIMEOUT = 2000
 beforeEach(() => {
   vi.clearAllMocks()
   getChart.mockResolvedValue({ data: storedChart })
+  getSong.mockResolvedValue({ data: { title: 'Amazing Grace', artist: 'John Newton' } })
   previewChart.mockResolvedValue({ data: previewRepresentation })
   saveChart.mockResolvedValue({ data: { ...storedChart } })
 })
@@ -293,6 +301,57 @@ describe('ChartEditorPage (#9.3)', () => {
       // ...and there are no editable Title / Artist Label inputs.
       expect(screen.queryByLabelText('Title')).not.toBeInTheDocument()
       expect(screen.queryByLabelText('Artist Label')).not.toBeInTheDocument()
+    })
+
+    it('shows the song title even when the song has no chart yet (getChart 404s)', async () => {
+      // Brand-new song: getChart 404s, but the song still has a title/artist
+      // from the dedicated song fetch — the header must NOT read "Untitled".
+      getChart.mockRejectedValueOnce({ response: { status: 404, data: { error: { code: 'CHART_NOT_FOUND' } } } })
+      getSong.mockResolvedValueOnce({ data: { title: 'Bye Bye Love', artist: 'The Everly Brothers' } })
+
+      renderPage()
+
+      expect(await screen.findByText('Bye Bye Love')).toBeInTheDocument()
+      expect(screen.getByText('The Everly Brothers')).toBeInTheDocument()
+      expect(screen.queryByText(/Untitled/i)).not.toBeInTheDocument()
+    })
+  })
+
+  describe('Preview resilience — verbatim fallback on parse error', () => {
+    it('shows the raw body text (not a blank panel) when previewChart rejects with a grammar 422', async () => {
+      // The next preview fails validation with the array-of-objects fields shape.
+      previewChart.mockRejectedValue({
+        response: {
+          status: 422,
+          data: {
+            error: {
+              code: 'CHART_INVALID',
+              message: 'Chart body is invalid',
+              fields: [{ line: 15, token: 'Verse 1', message: 'Invalid chord token' }],
+            },
+          },
+        },
+      })
+
+      renderPage()
+      await waitForLoaded()
+
+      // Set a body with an unparseable token. fireEvent.change is used instead
+      // of userEvent.type because the latter treats [ and ] as key-modifier
+      // syntax.
+      const textarea = screen.getByRole('textbox')
+      fireEvent.change(textarea, { target: { value: '[Verse 1] bad token' } })
+
+      // The panel shows a non-blocking notice AND the raw text verbatim — the
+      // error must NOT be the "[object Object]" artifact.
+      const notice = await screen.findByRole('alert', {}, { timeout: 2000 })
+      expect(notice.textContent).toMatch(/showing raw text/i)
+      expect(notice.textContent).not.toMatch(/\[object Object\]/)
+      // The verbatim body is rendered in the preview panel's <pre> (scoped so
+      // it is not confused with the same text inside the <textarea>).
+      const pre = notice.parentElement.querySelector('pre')
+      expect(pre).toBeTruthy()
+      expect(pre.textContent).toBe('[Verse 1] bad token')
     })
   })
 
