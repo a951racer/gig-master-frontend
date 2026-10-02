@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getChart, saveChart, previewChart } from '../../api/charts'
+import { getSong } from '../../api/songs'
 import { useBand } from '../../auth/BandContext'
 import ChartPages from './ChartPages'
 
@@ -54,8 +55,27 @@ const selectCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2
 // envelope { error: { code, message, fields } } the API returns.
 function errorMessage(err, fallback) {
   const envelope = err?.response?.data?.error
-  if (envelope?.fields) {
-    const detail = Object.values(envelope.fields).join(', ')
+  const fields = envelope?.fields
+  if (fields) {
+    // `fields` may be an array of { line, token, message } objects (grammar
+    // validation) or a plain { key: message } object. Normalize both to a
+    // readable string instead of stringifying objects to "[object Object]".
+    const parts = []
+    if (Array.isArray(fields)) {
+      for (const f of fields) {
+        if (f && typeof f === 'object') {
+          const where = f.line != null ? `line ${f.line}` : null
+          const what = f.token ? `"${f.token}"` : null
+          const msg = f.message || ''
+          parts.push([where, what, msg].filter(Boolean).join(' '))
+        } else if (f != null) {
+          parts.push(String(f))
+        }
+      }
+    } else if (typeof fields === 'object') {
+      for (const v of Object.values(fields)) parts.push(typeof v === 'string' ? v : JSON.stringify(v))
+    }
+    const detail = parts.filter(Boolean).join('; ')
     if (detail) return detail
   }
   return envelope?.message || fallback
@@ -66,12 +86,19 @@ function errorMessage(err, fallback) {
 // preview is a true WYSIWYG: multi-column layout, hidden COLUMN_BREAK /
 // PAGE_BREAK, and the page banner all match the viewer and the PDF. The pages
 // are scaled down to fit the narrower editor panel.
-function PreviewPanel({ render, error, loading }) {
+function PreviewPanel({ render, error, body, loading }) {
+  // When the preview request fails (e.g. a token the grammar can't parse), do
+  // NOT blank the panel. Per the product requirement, fall back to showing the
+  // raw edit-window text verbatim, with a small non-blocking notice explaining
+  // the parse problem, so the author can always see what they typed.
   if (error) {
     return (
-      <p role="alert" className="text-red-400 text-sm bg-red-900/20 border border-red-800/40 rounded-lg px-3 py-2">
-        {error}
-      </p>
+      <div>
+        <p role="alert" className="text-amber-300 text-xs bg-amber-900/20 border border-amber-800/40 rounded-lg px-3 py-2 mb-3">
+          Couldn’t fully parse the chart — showing raw text. {error}
+        </p>
+        <pre className="whitespace-pre-wrap font-mono text-sm text-gray-100">{body}</pre>
+      </div>
     )
   }
   if (!render) {
@@ -142,10 +169,8 @@ export default function ChartEditorPage() {
         const chart = res.data || {}
         setBody(chart.body || '')
         setLoadedBody(chart.body || '') // revert target = last-loaded body
-        // Title/artist are Song properties returned on the chart payload —
-        // read-only context only, never edited or saved from here.
-        setTitle(chart.title || '')
-        setArtist(chart.artist || '')
+        // Title/artist come from the dedicated song fetch (below), not here —
+        // they are Song properties and must be shown even when no chart exists.
         // Formatting rides along on save; fall back to defaults when absent so
         // the modal always has a complete block to edit.
         setFormatting({ ...DEFAULT_FORMATTING, ...(chart.formatting || {}) })
@@ -160,6 +185,28 @@ export default function ChartEditorPage() {
       })
       .finally(() => {
         if (!cancelled) setLoadingChart(false)
+      })
+    return () => {
+      cancelled = true
+    }
+  }, [songId, currentBand?.id])
+
+  // Fetch the SONG itself for the read-only title/artist. This is independent
+  // of whether a chart exists yet: a brand-new song has no chart (getChart
+  // 404s), but it always has a title/artist, so the header must come from the
+  // song — not from the chart payload — to avoid showing "Untitled song".
+  useEffect(() => {
+    let cancelled = false
+    getSong(songId)
+      .then((res) => {
+        if (cancelled) return
+        const song = res.data || {}
+        setTitle(song.title || '')
+        setArtist(song.artist || '')
+      })
+      .catch(() => {
+        // Non-fatal: if the song can't be loaded the header simply falls back
+        // to whatever the chart payload / preview provides.
       })
     return () => {
       cancelled = true
@@ -456,7 +503,7 @@ export default function ChartEditorPage() {
             {previewing && <span className="text-gray-500 text-xs">rendering…</span>}
           </div>
           <div className="flex-1 bg-[#2a2640] border border-purple-800/40 rounded-lg p-4 overflow-auto min-h-0">
-            <PreviewPanel render={render} error={previewError} loading={previewing} />
+            <PreviewPanel render={render} error={previewError} body={body} loading={previewing} />
           </div>
         </div>
       </div>
