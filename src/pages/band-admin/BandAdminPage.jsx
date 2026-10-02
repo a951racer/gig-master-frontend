@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { Outlet, NavLink } from 'react-router-dom'
 import { useBand } from '../../auth/BandContext'
 import { renameBand } from '../../api/bands'
+import { bandErrorMessage } from '../../constants/bandErrors'
 import { useRefreshMembership } from '../bands/refreshMembership'
 
 const inputCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
@@ -83,11 +84,7 @@ function BandSettings({ currentBand }) {
       await refreshMembershipAndGo('/band-admin', { selectBandId: currentBand.id })
     } catch (err) {
       setSaving(false)
-      setError(
-        err?.response?.data?.error?.message ||
-          err?.response?.data?.message ||
-          'Failed to rename band.'
-      )
+      setError(bandErrorMessage(err, 'Failed to rename band.'))
     }
   }
 

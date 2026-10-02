@@ -17,6 +17,7 @@ import { useAuth } from '../../../auth/AuthContext'
 import { userLabel } from '../../../constants/users'
 import ConfirmDialog from '../../../components/ConfirmDialog'
 import { DetailShell, Section, AdminTable, inputCls, btnPrimary, errMsg } from '../components/AdminUI'
+import { bandErrorMessage } from '../../../constants/bandErrors'
 
 // Sysadmin band-detail page (#57): rename, reassign administrator, manage
 // members (add/remove with admin indicator), and archive/delete. Gated on
@@ -109,7 +110,7 @@ function RenameWidget({ band, onChanged }) {
       setSuccess('Renamed.')
       await onChanged()
     } catch (err) {
-      setError(errMsg(err, 'Failed to rename band.'))
+      setError(bandErrorMessage(err, 'Failed to rename band.'))
     } finally {
       setSaving(false)
     }

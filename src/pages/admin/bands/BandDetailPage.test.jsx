@@ -82,6 +82,18 @@ describe('BandDetailPage actions', () => {
     await waitFor(() => expect(renameBand).toHaveBeenCalledWith('b-1', 'The Night Owls'))
   })
 
+  it('shows a friendly message when renaming to a duplicate band name (409)', async () => {
+    const user = userEvent.setup()
+    renameBand.mockRejectedValueOnce({ response: { data: { error: { code: 'DUPLICATE_BAND_NAME' } } } })
+    renderPage()
+    const nameField = await screen.findByLabelText('Band name')
+    await waitFor(() => expect(nameField).toHaveValue('The Owls'))
+    await user.clear(nameField)
+    await user.type(nameField, 'Taken Name')
+    await user.click(screen.getByRole('button', { name: /^save$/i }))
+    expect(await screen.findByText(/band names must be unique/i)).toBeInTheDocument()
+  })
+
   it('reassigns the administrator (from the members list)', async () => {
     const user = userEvent.setup()
     setBandAdministrator.mockResolvedValueOnce({ data: {} })

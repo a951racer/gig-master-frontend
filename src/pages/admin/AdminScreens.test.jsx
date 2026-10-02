@@ -189,6 +189,21 @@ describe('BandAdminListPage table (#56)', () => {
     await waitFor(() => expect(createBand).toHaveBeenCalled())
     expect(refreshMock).not.toHaveBeenCalled()
   })
+
+  it('shows a friendly message when creating a duplicate band name (409)', async () => {
+    const user = userEvent.setup()
+    createBand.mockRejectedValueOnce({ response: { data: { error: { code: 'DUPLICATE_BAND_NAME' } } } })
+    renderWithRouter(<BandAdminListPage />)
+    await screen.findByText('Active Band')
+
+    await user.click(screen.getByRole('button', { name: /create band/i }))
+    const dialog = await screen.findByRole('dialog')
+    await user.type(within(dialog).getByPlaceholderText(/band name/i), 'Active Band')
+    await user.selectOptions(within(dialog).getByLabelText(/create band administrator/i), 'me')
+    await user.click(within(dialog).getByRole('button', { name: /create band/i }))
+
+    expect(await within(dialog).findByText(/band names must be unique/i)).toBeInTheDocument()
+  })
 })
 
 // Seed genres page is unchanged by the remodel.
