@@ -157,7 +157,7 @@ function BannerHeader({ title, artist, keyLabel, chordColor }) {
   return (
     <div
       className="rounded px-5 flex flex-col justify-center mb-6"
-      style={{ minHeight: `${BANNER_HEIGHT}px`, backgroundColor: hexToRgba(chordColor, 0.3) }}
+      style={{ minHeight: `${BANNER_HEIGHT}px`, backgroundColor: hexToRgba(chordColor, 0.25) }}
     >
       <div className="text-2xl font-bold text-gray-900 leading-tight">
         {title} [{keyLabel}]
