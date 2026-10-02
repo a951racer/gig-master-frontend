@@ -142,6 +142,47 @@ describe('ChartViewerPage (#12)', () => {
     expect(screen.getByText('zing grace')).toBeInTheDocument()
   })
 
+  it('renders a chord quality as superscript (degree stays unambiguous)', async () => {
+    // A representation whose segment carries structured chord parts: degree 4
+    // with quality "5" (a D5 power chord). The quality must render in a <sup>
+    // so "45" is not shown as one ambiguous number.
+    viewChart.mockResolvedValueOnce({
+      data: {
+        title: 'Intro Only',
+        artist: 'Someone',
+        keyLabel: 'Numbers',
+        formatting: { font: 'monospace', size: 11, chordColor: 'blue', columns: 1 },
+        pages: [
+          {
+            columns: [
+              {
+                lines: [
+                  {
+                    segments: [
+                      { chord: '45', root: '4', quality: '5', bass: null, lyric: ' ' },
+                    ],
+                    directive: null,
+                    transposeShift: null,
+                  },
+                ],
+              },
+            ],
+          },
+        ],
+      },
+    })
+
+    renderPage()
+
+    // The quality "5" is rendered inside a <sup> element, separate from the "4".
+    const sup = await waitFor(() => {
+      const el = document.querySelector('sup')
+      if (!el) throw new Error('no sup yet')
+      return el
+    })
+    expect(sup.textContent).toBe('5')
+  })
+
   it('defaults to Numbers: calls viewChart with { key: "Numbers" } on mount and shows degrees', async () => {
     renderPage()
 

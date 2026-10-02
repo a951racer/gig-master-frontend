@@ -41,15 +41,44 @@ export function resolveChordColor(token) {
   return CHORD_COLORS[token] || token
 }
 
+// Render a chord as ROOT + superscript QUALITY (+ optional /BASS). On a number
+// chart "45" (degree 4, quality "5") is ambiguous, so the quality/extension is
+// superscripted to visually separate it from the degree. `root`/`quality`/
+// `bass` come parsed from the API; we fall back to the raw `chord` text when
+// they are absent (e.g. an unparseable verbatim token).
+function ChordText({ chord, root, quality, bass }) {
+  // Unparseable / plain token: render the raw text.
+  if (root == null && !quality && !bass) {
+    return <>{chord || '\u00A0'}</>
+  }
+  return (
+    <>
+      {root}
+      {quality ? <sup className="text-[0.7em] font-semibold">{quality}</sup> : null}
+      {bass ? <span>/{bass}</span> : null}
+    </>
+  )
+}
+
 // A single rendered segment: chord stacked above its lyric, monospaced so the
 // chord stays glued to the start of the syllable it sits over. whitespace-pre
 // preserves spacing; the segments do NOT wrap (a line is one horizontal run)
-// so chord/lyric alignment never breaks mid-line.
-function Segment({ chord, lyric, chordColor }) {
+// so chord/lyric alignment never breaks mid-line. A trailing space is appended
+// to the CHORD so that when a chord is wider than its (often single-space)
+// lyric — e.g. a chord-only INTRO line — adjacent chords never collide.
+function Segment({ chord, root, quality, bass, lyric, chordColor }) {
+  const hasChord = (chord && chord.length) || root
   return (
     <span className="inline-flex flex-col align-top whitespace-pre leading-none">
       <span className="font-semibold pb-0.5" style={{ color: chordColor }}>
-        {chord || '\u00A0'}
+        {hasChord ? (
+          <>
+            <ChordText chord={chord} root={root} quality={quality} bass={bass} />
+            {'\u00A0'}
+          </>
+        ) : (
+          '\u00A0'
+        )}
       </span>
       <span className="text-gray-900">{lyric || '\u00A0'}</span>
     </span>
@@ -89,7 +118,7 @@ function Line({ line, chordColor }) {
   return (
     <div className="flex items-start whitespace-pre">
       {segments.map((seg, i) => (
-        <Segment key={i} chord={seg.chord} lyric={seg.lyric} chordColor={chordColor} />
+        <Segment key={i} chord={seg.chord} root={seg.root} quality={seg.quality} bass={seg.bass} lyric={seg.lyric} chordColor={chordColor} />
       ))}
     </div>
   )
