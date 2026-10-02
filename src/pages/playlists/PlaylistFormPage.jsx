@@ -30,7 +30,12 @@ export default function PlaylistFormPage() {
       isEdit ? await updatePlaylist(editId, form) : await createPlaylist(form)
       navigate('/playlists')
     } catch (err) {
-      setError(err.response?.data?.error?.message || 'Failed to save playlist')
+      const code = err.response?.data?.error?.code
+      if (code === 'DUPLICATE_NAME') {
+        setError('Playlist names must be unique within your band. Please choose a different name.')
+      } else {
+        setError(err.response?.data?.error?.message || 'Failed to save playlist')
+      }
     } finally { setLoading(false) }
   }
 

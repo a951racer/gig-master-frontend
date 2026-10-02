@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { listPlaylists, deletePlaylist } from '../../api/playlists'
+import { listPlaylists, deletePlaylist, getPlaylist, createPlaylist } from '../../api/playlists'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import { useBand } from '../../auth/BandContext'
 import NoBandPrompt from '../bands/NoBandPrompt'
@@ -12,6 +12,7 @@ export default function PlaylistListPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [confirmDelete, setConfirmDelete] = useState(null)
+  const [copySource, setCopySource] = useState(null)
 
   useEffect(() => {
     if (hasNoBand) return
@@ -29,6 +30,19 @@ export default function PlaylistListPage() {
       setPlaylists(prev => prev.filter(p => p._id !== playlist._id))
     } catch { setError('Failed to delete playlist') }
     finally { setConfirmDelete(null) }
+  }
+
+  // Copy a playlist: fetch the source's songs, then create a new playlist with
+  // the chosen name/description and the same songs (one atomic POST), and open
+  // the new playlist. Throws on failure so the modal can surface the message
+  // in-dialog (e.g. a duplicate-name 409) and let the user fix the name.
+  const handleCopy = async ({ name, description }) => {
+    const source = copySource
+    const res = await getPlaylist(source._id)
+    const songIds = (res.data.songs || []).map(sg => (typeof sg === 'string' ? sg : sg._id))
+    const created = await createPlaylist({ name, description, songs: songIds })
+    setCopySource(null)
+    navigate(`/playlists/${created.data._id}`)
   }
 
   if (hasNoBand) {
@@ -74,6 +88,7 @@ export default function PlaylistListPage() {
               </span>
               <div className="flex gap-2">
                 <button onClick={() => navigate(`/playlists/new?edit=${p._id}`)} className="text-xs text-purple-400 hover:text-purple-300 transition-colors px-2 py-1">Edit</button>
+                <button onClick={() => setCopySource(p)} className="text-xs text-gray-300 hover:text-white transition-colors px-2 py-1">Copy</button>
                 <button onClick={() => setConfirmDelete(p)} className="text-xs text-red-400 hover:text-red-300 transition-colors px-2 py-1">Delete</button>
               </div>
             </div>
@@ -88,6 +103,73 @@ export default function PlaylistListPage() {
           onCancel={() => setConfirmDelete(null)}
         />
       )}
+
+      {copySource && (
+        <CopyPlaylistModal
+          source={copySource}
+          onCopy={handleCopy}
+          onCancel={() => setCopySource(null)}
+        />
+      )}
+    </div>
+  )
+}
+
+// Modal to copy a playlist — prefilled with "Copy of <name>" and the source
+// description. The songs are carried over by the parent on confirm.
+function CopyPlaylistModal({ source, onCopy, onCancel }) {
+  const [name, setName] = useState(`Copy of ${source.name}`)
+  // A copied playlist is flagged as a duplicate in its description.
+  const [description, setDescription] = useState('** Duplicate **')
+  const [saving, setSaving] = useState(false)
+  const [error, setError] = useState('')
+
+  const inputCls = 'w-full bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
+
+  async function handleSubmit(e) {
+    e.preventDefault()
+    setError('')
+    if (!name.trim()) { setError('Name is required.'); return }
+    setSaving(true)
+    try {
+      await onCopy({ name: name.trim(), description: description.trim() })
+    } catch (err) {
+      const code = err?.response?.data?.error?.code
+      if (code === 'DUPLICATE_NAME') {
+        setError('Playlist names must be unique within your band. Please choose a different name.')
+      } else {
+        setError(err?.response?.data?.error?.message || 'Failed to copy playlist.')
+      }
+    } finally {
+      setSaving(false)
+    }
+  }
+
+  return (
+    <div
+      className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4"
+      onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel() }}
+    >
+      <div role="dialog" aria-modal="true" aria-label="Copy playlist" className="w-full max-w-md bg-[#2a2640] border border-purple-800/50 rounded-2xl p-6 shadow-2xl">
+        <h2 className="text-lg font-semibold text-white mb-4">Copy playlist</h2>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <label className="text-sm text-gray-300">
+            Name
+            <input aria-label="New playlist name" value={name} onChange={(e) => setName(e.target.value)} className={inputCls + ' mt-1'} autoFocus />
+          </label>
+          <label className="text-sm text-gray-300">
+            Description
+            <input aria-label="New playlist description" value={description} onChange={(e) => setDescription(e.target.value)} className={inputCls + ' mt-1'} />
+          </label>
+          {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
+          <div className="flex items-center gap-3 mt-1">
+            <button type="submit" disabled={saving} className="bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
+              {saving ? 'Copying…' : 'Copy playlist'}
+            </button>
+            <button type="button" onClick={onCancel} className="text-sm text-gray-400 hover:text-white px-3 py-2">Cancel</button>
+          </div>
+        </form>
+      </div>
     </div>
   )
 }
