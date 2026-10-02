@@ -41,6 +41,23 @@ export function resolveChordColor(token) {
   return CHORD_COLORS[token] || token
 }
 
+// Build an rgba() string from a #rgb / #rrggbb color at the given alpha. Used
+// to tint the page-1 banner background from the chord color (a light wash).
+// Falls back to the input (so a CSS color name still works, just without the
+// alpha) when it isn't a hex value.
+function hexToRgba(color, alpha) {
+  if (typeof color !== 'string') return color
+  let hex = color.trim()
+  if (hex[0] !== '#') return color
+  hex = hex.slice(1)
+  if (hex.length === 3) hex = hex.split('').map((c) => c + c).join('')
+  if (hex.length !== 6) return color
+  const r = parseInt(hex.slice(0, 2), 16)
+  const g = parseInt(hex.slice(2, 4), 16)
+  const b = parseInt(hex.slice(4, 6), 16)
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`
+}
+
 // Render a chord as ROOT + superscript QUALITY (+ optional /BASS). On a number
 // chart "45" (degree 4, quality "5") is ambiguous, so the quality/extension is
 // superscripted to visually separate it from the degree. `root`/`quality`/
@@ -134,12 +151,13 @@ function Column({ column, chordColor }) {
   )
 }
 
-// Page 1 banner header: shaded block with "Title [Key]" and "[Artist]".
-function BannerHeader({ title, artist, keyLabel }) {
+// Page 1 banner header: a block tinted from the chart's chord color (a light
+// 30%-opacity wash) with "Title [Key]" and "[Artist]".
+function BannerHeader({ title, artist, keyLabel, chordColor }) {
   return (
     <div
-      className="bg-gray-200 rounded px-5 flex flex-col justify-center mb-6"
-      style={{ minHeight: `${BANNER_HEIGHT}px` }}
+      className="rounded px-5 flex flex-col justify-center mb-6"
+      style={{ minHeight: `${BANNER_HEIGHT}px`, backgroundColor: hexToRgba(chordColor, 0.3) }}
     >
       <div className="text-2xl font-bold text-gray-900 leading-tight">
         {title} [{keyLabel}]
@@ -173,7 +191,7 @@ function ChartPage({ page, index, title, artist, keyLabel, chordColor, columnGap
       }}
     >
       {index === 0 ? (
-        <BannerHeader title={title} artist={artist} keyLabel={keyLabel} />
+        <BannerHeader title={title} artist={artist} keyLabel={keyLabel} chordColor={chordColor} />
       ) : (
         <CondensedHeader title={title} keyLabel={keyLabel} />
       )}
