@@ -44,12 +44,30 @@ const storedChart = {
   formatting: { font: 'monospace', size: 11, chordColor: 'blue', columns: 1 },
 }
 
-// A minimal Render_Representation returned from previewChart.
+// A Render_Representation returned from previewChart. It carries the server-
+// computed `pages` structure (PAGE_BREAK / COLUMN_BREAK already resolved into
+// pages/columns) that the editor preview renders via the shared <ChartPages>.
 const previewRepresentation = {
   title: 'Amazing Grace',
   artist: 'John Newton',
   keyLabel: 'Numbers',
+  formatting: { font: 'monospace', size: 11, chordColor: 'blue', columns: 2 },
+  // flat sections kept for back-compat; the preview renders `pages`.
   sections: [],
+  pages: [
+    {
+      columns: [
+        { lines: [
+          { header: { label: 'VERSE 1', repeat: null } },
+          { segments: [{ chord: '1', lyric: 'Almost ' }, { chord: '4', lyric: 'heaven' }], directive: null, transposeShift: null },
+        ] },
+        { lines: [
+          { header: { label: 'VERSE 2', repeat: null } },
+          { segments: [{ chord: '5', lyric: 'West ' }, { chord: '1', lyric: 'Virginia' }], directive: null, transposeShift: null },
+        ] },
+      ],
+    },
+  ],
 }
 
 // The live preview is debounced 400ms. Rather than fight Testing Library's
@@ -131,7 +149,26 @@ describe('ChartEditorPage (#9.3)', () => {
       expect(previewChart).not.toHaveBeenCalled()
     })
 
-    it('both key selectors default to "Numbers"', async () => {
+    it('renders the paginated preview (multi-column) and never shows COLUMN_BREAK', async () => {
+      renderPage()
+      await waitForLoaded()
+
+      // The preview renders the `pages` content: both verse headers appear
+      // (one per column) and the chord-over-lyric content is shown.
+      await waitFor(
+        () => expect(screen.getByText('VERSE 1')).toBeInTheDocument(),
+        { timeout: PREVIEW_TIMEOUT },
+      )
+      expect(screen.getByText('VERSE 2')).toBeInTheDocument()
+      expect(screen.getByText('heaven')).toBeInTheDocument()
+
+      // COLUMN_BREAK / PAGE_BREAK are resolved server-side and must NEVER be
+      // rendered as visible text in the preview.
+      expect(screen.queryByText(/COLUMN_BREAK/)).not.toBeInTheDocument()
+      expect(screen.queryByText(/PAGE_BREAK/)).not.toBeInTheDocument()
+    })
+
+        it('both key selectors default to "Numbers"', async () => {
       renderPage()
       await waitForLoaded()
 
