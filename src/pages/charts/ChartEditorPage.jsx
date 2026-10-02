@@ -2,6 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useNavigate, useParams } from 'react-router-dom'
 import { getChart, saveChart, previewChart } from '../../api/charts'
 import { useBand } from '../../auth/BandContext'
+import ChartPages from './ChartPages'
 
 // Song Charts — PCO-style two-panel editor shell (task 9.1).
 //
@@ -60,58 +61,11 @@ function errorMessage(err, fallback) {
   return envelope?.message || fallback
 }
 
-// Render a single line: chords sit on their own row directly above the lyric
-// row, aligned per segment, both monospaced so columns line up. A segment may
-// carry only a chord (chord-only line) or only lyric (plain lyric).
-function PreviewLine({ line }) {
-  // Directive lines (PAGE_BREAK / COLUMN_BREAK / TRANSPOSE_KEY) render as a
-  // dim marker rather than chord-over-lyric.
-  if (line.directive) {
-    const label =
-      line.directive === 'TRANSPOSE_KEY'
-        ? `TRANSPOSE KEY ${line.transposeShift >= 0 ? '+' : ''}${line.transposeShift}`
-        : line.directive
-    return <div className="text-purple-400/70 text-xs uppercase tracking-wide py-0.5">— {label} —</div>
-  }
-
-  const segments = line.segments || []
-  // A fully blank line (no segments) renders as vertical spacing.
-  if (segments.length === 0) {
-    return <div className="h-4" />
-  }
-
-  return (
-    <div className="flex font-mono text-sm whitespace-pre leading-tight">
-      {segments.map((seg, i) => (
-        <span key={i} className="flex flex-col">
-          <span className="text-purple-300 h-5">{seg.chord || '\u00A0'}</span>
-          <span className="text-gray-100">{seg.lyric || '\u00A0'}</span>
-        </span>
-      ))}
-    </div>
-  )
-}
-
-function PreviewSection({ section }) {
-  return (
-    <div className="mb-4">
-      {section.label && (
-        <div className="text-purple-400 font-semibold text-sm mb-1">
-          {section.label}
-          {section.repeat ? <span className="text-gray-400 font-normal"> ×{section.repeat}</span> : null}
-        </div>
-      )}
-      <div className="space-y-0.5">
-        {(section.lines || []).map((line, i) => (
-          <PreviewLine key={i} line={line} />
-        ))}
-      </div>
-    </div>
-  )
-}
-
-// The live preview panel. Renders the Render_Representation, a loading hint, or
-// an inline error without ever throwing.
+// The live preview panel. Renders the SAME paginated `pages` structure the
+// on-screen viewer uses (via the shared <ChartPages> component), so the editor
+// preview is a true WYSIWYG: multi-column layout, hidden COLUMN_BREAK /
+// PAGE_BREAK, and the page banner all match the viewer and the PDF. The pages
+// are scaled down to fit the narrower editor panel.
 function PreviewPanel({ render, error, loading }) {
   if (error) {
     return (
@@ -123,22 +77,14 @@ function PreviewPanel({ render, error, loading }) {
   if (!render) {
     return <p className="text-gray-500 text-sm">{loading ? 'Rendering…' : 'Start typing to see a live preview.'}</p>
   }
-  const sections = render.sections || []
+  const hasPages = Array.isArray(render.pages) && render.pages.length > 0
   return (
     <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-      {(render.title || render.artist) && (
-        <div className="mb-3">
-          {render.title && <div className="text-white font-bold text-lg">{render.title}</div>}
-          {render.artist && <div className="text-gray-400 text-sm">{render.artist}</div>}
-        </div>
-      )}
-      {render.keyLabel && (
-        <div className="text-xs text-gray-500 mb-3">Key: {render.keyLabel}</div>
-      )}
-      {sections.length === 0 ? (
-        <p className="text-gray-500 text-sm">Nothing to preview yet.</p>
+      {hasPages ? (
+        // Scale the 816px-wide virtual pages down to fit the editor's panel.
+        <ChartPages representation={render} scale={0.5} />
       ) : (
-        sections.map((section, i) => <PreviewSection key={i} section={section} />)
+        <p className="text-gray-500 text-sm">Nothing to preview yet.</p>
       )}
     </div>
   )
@@ -367,6 +313,12 @@ export default function ChartEditorPage() {
     }
   }
 
+  // Prefer the live preview's song title/artist (always present on the render
+  // response), falling back to the values loaded from getChart. This keeps the
+  // header correct even if the initial chart load lacked them.
+  const displayTitle = render?.title || title
+  const displayArtist = render?.artist || artist
+
   return (
     <div className="h-[calc(100vh-4rem)] flex flex-col px-6 py-6">
       {/* Header: back link, title, save controls */}
@@ -402,8 +354,8 @@ export default function ChartEditorPage() {
           not chart-overridable, so they are shown as static labels and are not
           part of the saveChart payload. */}
       <div className="flex items-baseline gap-3 mb-4">
-        <span className="text-lg font-bold text-white">{title || 'Untitled song'}</span>
-        {artist && <span className="text-sm text-gray-400">{artist}</span>}
+        <span className="text-lg font-bold text-white">{displayTitle || 'Untitled song'}</span>
+        {displayArtist && <span className="text-sm text-gray-400">{displayArtist}</span>}
       </div>
 
       {saveError && (
