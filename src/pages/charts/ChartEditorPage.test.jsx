@@ -35,18 +35,19 @@ import { getChart, previewChart, saveChart } from '../../api/charts'
 
 const renderPage = () => render(<MemoryRouter><ChartEditorPage /></MemoryRouter>)
 
-// A stored chart (canonical Numbers body + metadata) returned from getChart.
+// A stored chart returned from getChart. Title/artist are Song properties the
+// server includes on the chart payload — read-only context, never saved back.
 const storedChart = {
   body: '[1]Amazing [4]grace',
   title: 'Amazing Grace',
-  artistLabel: 'John Newton',
+  artist: 'John Newton',
   formatting: { font: 'monospace', size: 11, chordColor: 'blue', columns: 1 },
 }
 
 // A minimal Render_Representation returned from previewChart.
 const previewRepresentation = {
   title: 'Amazing Grace',
-  artistLabel: 'John Newton',
+  artist: 'John Newton',
   keyLabel: 'Numbers',
   sections: [],
 }
@@ -243,8 +244,23 @@ describe('ChartEditorPage (#9.3)', () => {
     })
   })
 
+  describe('Song title/artist are read-only (not chart-overridable)', () => {
+    it('shows the song title and artist as read-only text, not editable inputs', async () => {
+      renderPage()
+      await waitForLoaded()
+
+      // Title/artist appear as static context...
+      expect(screen.getByText('Amazing Grace')).toBeInTheDocument()
+      expect(screen.getByText('John Newton')).toBeInTheDocument()
+
+      // ...and there are no editable Title / Artist Label inputs.
+      expect(screen.queryByLabelText('Title')).not.toBeInTheDocument()
+      expect(screen.queryByLabelText('Artist Label')).not.toBeInTheDocument()
+    })
+  })
+
   describe('Save sends the correct payload (R11.1)', () => {
-    it('Save calls saveChart with enteredKey, body, title, artistLabel and formatting', async () => {
+    it('Save calls saveChart with only enteredKey, body and formatting (no title/artist)', async () => {
       const user = userEvent.setup()
       renderPage()
       await waitForLoaded()
@@ -255,11 +271,15 @@ describe('ChartEditorPage (#9.3)', () => {
         expect(saveChart).toHaveBeenCalledWith('song-1', {
           enteredKey: 'Numbers',
           body: storedChart.body,
-          title: storedChart.title,
-          artistLabel: storedChart.artistLabel,
           formatting: storedChart.formatting,
         }),
       )
+
+      // Title/artist must NOT be part of the payload.
+      const payload = saveChart.mock.calls[0][1]
+      expect(payload).not.toHaveProperty('title')
+      expect(payload).not.toHaveProperty('artistLabel')
+      expect(payload).not.toHaveProperty('artist')
     })
 
     it('Save includes the selected Entered Key in the payload', async () => {

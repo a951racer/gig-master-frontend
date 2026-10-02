@@ -34,10 +34,13 @@ import { viewChart } from '../../api/charts'
 
 const renderPage = () => render(<MemoryRouter><ChartViewerPage /></MemoryRouter>)
 
-// A Render_Representation using Nashville degrees (what `Numbers` returns).
+// A Render_Representation using Nashville degrees (what `Numbers` returns). The
+// server resolves breaks into a `pages` structure: each page has `columns`,
+// each column has `lines` (header / content / transpose). `sections` remains
+// for back-compat but the viewer renders from `pages`.
 const numbersRepresentation = {
   title: 'Amazing Grace',
-  artistLabel: 'John Newton',
+  artist: 'John Newton',
   keyLabel: 'Numbers',
   formatting: { font: 'monospace', size: 11, chordColor: 'blue', columns: 1 },
   sections: [
@@ -55,12 +58,32 @@ const numbersRepresentation = {
       ],
     },
   ],
+  pages: [
+    {
+      columns: [
+        {
+          lines: [
+            { header: { label: 'Verse 1', repeat: null } },
+            {
+              segments: [
+                { chord: '1', lyric: 'A' },
+                { chord: '4', lyric: 'ma' },
+                { chord: '1', lyric: 'zing grace' },
+              ],
+              directive: null,
+              transposeShift: null,
+            },
+          ],
+        },
+      ],
+    },
+  ],
 }
 
 // The same chart transposed into G — chord tokens are spelled names now.
 const namesRepresentation = {
   title: 'Amazing Grace',
-  artistLabel: 'John Newton',
+  artist: 'John Newton',
   keyLabel: 'G',
   formatting: { font: 'monospace', size: 11, chordColor: 'blue', columns: 1 },
   sections: [
@@ -78,6 +101,26 @@ const namesRepresentation = {
       ],
     },
   ],
+  pages: [
+    {
+      columns: [
+        {
+          lines: [
+            { header: { label: 'Verse 1', repeat: null } },
+            {
+              segments: [
+                { chord: 'G', lyric: 'A' },
+                { chord: 'C', lyric: 'ma' },
+                { chord: 'G', lyric: 'zing grace' },
+              ],
+              directive: null,
+              transposeShift: null,
+            },
+          ],
+        },
+      ],
+    },
+  ],
 }
 
 beforeEach(() => {
@@ -86,17 +129,14 @@ beforeEach(() => {
 })
 
 describe('ChartViewerPage (#12)', () => {
-  it('renders the title, key label, section and chord-over-lyric segments from the representation', async () => {
+  it('renders the title+key banner, artist, section header and chord-over-lyric segments from the pages', async () => {
     renderPage()
 
-    // Title + artist header.
-    expect(await screen.findByRole('heading', { name: 'Amazing Grace' })).toBeInTheDocument()
-    expect(screen.getByText('John Newton')).toBeInTheDocument()
+    // Page 1 banner: "<title> [<keyLabel>]" and the artist in brackets.
+    expect(await screen.findByText(/Amazing Grace \[Numbers\]/)).toBeInTheDocument()
+    expect(screen.getByText('[John Newton]')).toBeInTheDocument()
 
-    // "Key: <keyLabel>" line (keyLabel from the representation).
-    expect(screen.getByText(/Key:\s*Numbers/i)).toBeInTheDocument()
-
-    // Section header + chord-over-lyric content.
+    // Section header (rendered from the page's header line) + chord-over-lyric.
     expect(screen.getByRole('heading', { name: /Verse 1/i })).toBeInTheDocument()
     expect(screen.getByText('ma')).toBeInTheDocument()
     expect(screen.getByText('zing grace')).toBeInTheDocument()
@@ -134,8 +174,8 @@ describe('ChartViewerPage (#12)', () => {
     // The selection drives a re-fetch with the chosen key.
     await waitFor(() => expect(viewChart).toHaveBeenCalledWith('song-1', { key: 'G' }))
 
-    // The key label updates once the names representation renders.
-    expect(await screen.findByText(/Key:\s*G/i)).toBeInTheDocument()
+    // The key label updates in the banner once the names representation renders.
+    expect(await screen.findByText(/Amazing Grace \[G\]/)).toBeInTheDocument()
 
     // Transposed chord names render as chord segments. Scope to the chord spans
     // so the Key selector's <option> values (which also read "C"/"G") are not
@@ -151,7 +191,7 @@ describe('ChartViewerPage (#12)', () => {
 
     // The chart renders (viewer is shown within the selected band) and the API
     // is called for the routed song in that band's scope.
-    expect(await screen.findByRole('heading', { name: 'Amazing Grace' })).toBeInTheDocument()
+    expect(await screen.findByText(/Amazing Grace \[Numbers\]/)).toBeInTheDocument()
     await waitFor(() => expect(viewChart).toHaveBeenCalledWith('song-1', { key: 'Numbers' }))
   })
 
@@ -164,6 +204,6 @@ describe('ChartViewerPage (#12)', () => {
 
     expect(await screen.findByText(/no chart yet/i)).toBeInTheDocument()
     // The chart body is not rendered in the empty state.
-    expect(screen.queryByRole('heading', { name: 'Amazing Grace' })).not.toBeInTheDocument()
+    expect(screen.queryByText(/Amazing Grace \[Numbers\]/)).not.toBeInTheDocument()
   })
 })

@@ -126,10 +126,10 @@ function PreviewPanel({ render, error, loading }) {
   const sections = render.sections || []
   return (
     <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
-      {(render.title || render.artistLabel) && (
+      {(render.title || render.artist) && (
         <div className="mb-3">
           {render.title && <div className="text-white font-bold text-lg">{render.title}</div>}
-          {render.artistLabel && <div className="text-gray-400 text-sm">{render.artistLabel}</div>}
+          {render.artist && <div className="text-gray-400 text-sm">{render.artist}</div>}
         </div>
       )}
       {render.keyLabel && (
@@ -153,13 +153,14 @@ export default function ChartEditorPage() {
   // body         : the working ChordPro text in the left textarea.
   // enteredKey   : how `body` is interpreted ("Numbers" | major key).
   // displayedKey : how the right-panel preview is rendered.
-  // title/artistLabel : optional metadata carried on save (minimal for 9.1).
-  // formatting   : default formatting block; the Formatting modal is task 9.2.
+  // title/artist : READ-ONLY, sourced from the Song (never chart-overridable).
+  //                Shown for context; not editable and not part of the save.
+  // formatting   : default formatting block; edited via the Formatting modal.
   const [body, setBody] = useState('')
   const [enteredKey, setEnteredKey] = useState('Numbers')
   const [displayedKey, setDisplayedKey] = useState('Numbers')
   const [title, setTitle] = useState('')
-  const [artistLabel, setArtistLabel] = useState('')
+  const [artist, setArtist] = useState('')
   const [formatting, setFormatting] = useState(DEFAULT_FORMATTING)
 
   // loadedBody : the body as last fetched on mount / last saved. "Revert All
@@ -195,8 +196,10 @@ export default function ChartEditorPage() {
         const chart = res.data || {}
         setBody(chart.body || '')
         setLoadedBody(chart.body || '') // revert target = last-loaded body
+        // Title/artist are Song properties returned on the chart payload —
+        // read-only context only, never edited or saved from here.
         setTitle(chart.title || '')
-        setArtistLabel(chart.artistLabel || '')
+        setArtist(chart.artist || '')
         // Formatting rides along on save; fall back to defaults when absent so
         // the modal always has a complete block to edit.
         setFormatting({ ...DEFAULT_FORMATTING, ...(chart.formatting || {}) })
@@ -354,7 +357,7 @@ export default function ChartEditorPage() {
     setSaveError('')
     setSaved(false)
     try {
-      await saveChart(songId, { enteredKey, body, title, artistLabel, formatting })
+      await saveChart(songId, { enteredKey, body, formatting })
       setLoadedBody(body) // the saved body becomes the new revert target
       setSaved(true)
     } catch (err) {
@@ -395,28 +398,12 @@ export default function ChartEditorPage() {
         </div>
       </div>
 
-      {/* Optional metadata — minimal for 9.1 (full Options menu is 9.2) */}
-      <div className="grid grid-cols-2 gap-4 mb-4">
-        <div>
-          <label htmlFor="chart-title" className={labelCls}>Title</label>
-          <input
-            id="chart-title"
-            value={title}
-            onChange={(e) => { setTitle(e.target.value); markDirty() }}
-            className={inputCls}
-            placeholder="Optional display title"
-          />
-        </div>
-        <div>
-          <label htmlFor="chart-artist" className={labelCls}>Artist Label</label>
-          <input
-            id="chart-artist"
-            value={artistLabel}
-            onChange={(e) => { setArtistLabel(e.target.value); markDirty() }}
-            className={inputCls}
-            placeholder="Optional artist label"
-          />
-        </div>
+      {/* Song title / artist — READ-ONLY context. These are Song properties,
+          not chart-overridable, so they are shown as static labels and are not
+          part of the saveChart payload. */}
+      <div className="flex items-baseline gap-3 mb-4">
+        <span className="text-lg font-bold text-white">{title || 'Untitled song'}</span>
+        {artist && <span className="text-sm text-gray-400">{artist}</span>}
       </div>
 
       {saveError && (
