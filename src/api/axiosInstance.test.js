@@ -3,6 +3,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import axiosInstance, {
   setAccessToken,
   clearAccessToken,
+  resolveApiBaseUrl,
 } from './axiosInstance'
 
 // ---------------------------------------------------------------------------
@@ -219,5 +220,32 @@ describe('axiosInstance response interceptor', () => {
     expect(callCount('/auth/refresh')).toBe(0)
     expect(callCount('/band-scoped')).toBe(1)
     expect(window.location.href).toBe('http://localhost/')
+  })
+})
+
+// Runtime API base URL resolution (#8): runtime config wins over the build-time
+// env var, which wins over the localhost fallback.
+describe('resolveApiBaseUrl (#8 runtime config)', () => {
+  afterEach(() => {
+    delete window.__APP_CONFIG__
+  })
+
+  it('prefers window.__APP_CONFIG__.apiUrl when set', () => {
+    window.__APP_CONFIG__ = { apiUrl: 'https://runtime-api.example.com' }
+    expect(resolveApiBaseUrl()).toBe('https://runtime-api.example.com')
+  })
+
+  it('falls back past an empty runtime apiUrl', () => {
+    // An empty runtime value (the committed default) must not win; it falls
+    // through to the build-time env or localhost.
+    window.__APP_CONFIG__ = { apiUrl: '' }
+    const resolved = resolveApiBaseUrl()
+    expect(resolved).not.toBe('')
+    // In the test env VITE_API_URL is unset, so it lands on the localhost default.
+    expect(resolved).toBe(import.meta.env.VITE_API_URL || 'http://localhost:3001')
+  })
+
+  it('uses the localhost default when neither runtime nor build-time is set', () => {
+    expect(resolveApiBaseUrl()).toBe(import.meta.env.VITE_API_URL || 'http://localhost:3001')
   })
 })

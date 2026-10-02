@@ -1,7 +1,21 @@
 import axios from 'axios'
 
+// Resolve the API base URL with this precedence (#8):
+//   1. window.__APP_CONFIG__.apiUrl — RUNTIME config injected by /config.js,
+//      regenerated per-environment at dyno startup (survives Heroku promote,
+//      which copies the built slug without rebuilding).
+//   2. import.meta.env.VITE_API_URL — build-time value, used for local dev.
+//   3. http://localhost:3001 — final dev fallback.
+export function resolveApiBaseUrl() {
+  const runtime =
+    typeof window !== 'undefined' &&
+    window.__APP_CONFIG__ &&
+    window.__APP_CONFIG__.apiUrl
+  return runtime || import.meta.env.VITE_API_URL || 'http://localhost:3001'
+}
+
 const axiosInstance = axios.create({
-  baseURL: import.meta.env.VITE_API_URL || 'http://localhost:3001',
+  baseURL: resolveApiBaseUrl(),
   withCredentials: true, // send httpOnly refresh token cookie automatically
 })
 
