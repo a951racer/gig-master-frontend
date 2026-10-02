@@ -82,7 +82,7 @@ function PreviewPanel({ render, error, loading }) {
     <div className={loading ? 'opacity-60 transition-opacity' : 'transition-opacity'}>
       {hasPages ? (
         // Scale the 816px-wide virtual pages down to fit the editor's panel.
-        <ChartPages representation={render} scale={0.5} />
+        <ChartPages representation={render} fitToWidth />
       ) : (
         <p className="text-gray-500 text-sm">Nothing to preview yet.</p>
       )}
@@ -177,7 +177,7 @@ export default function ChartEditorPage() {
       return
     }
     setPreviewing(true)
-    previewChart(songId, { body, enteredKey, displayedKey })
+    previewChart(songId, { body, enteredKey, displayedKey, formatting })
       .then((res) => {
         setRender(res.data)
         setPreviewError('')
@@ -188,7 +188,7 @@ export default function ChartEditorPage() {
         setPreviewError(errorMessage(err, 'Preview unavailable — check the chart body.'))
       })
       .finally(() => setPreviewing(false))
-  }, [songId, body, enteredKey, displayedKey])
+  }, [songId, body, enteredKey, displayedKey, formatting])
 
   useEffect(() => {
     // Don't preview until the initial chart load has settled.
