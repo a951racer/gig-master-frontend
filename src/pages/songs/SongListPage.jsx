@@ -130,6 +130,8 @@ export default function SongListPage() {
                   <td className="px-4 py-3 text-gray-400 text-xs">{song.tags?.join(', ') || '—'}</td>
                   <td className="px-4 py-3 text-gray-400">{song.performedKey || song.originalKey || '—'}</td>
                   <td className="px-4 py-3 text-right space-x-2">
+                    <button onClick={() => navigate(`/songs/${song._id}/chart`)} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">Chart</button>
+                    <button onClick={() => navigate(`/songs/${song._id}/chart/edit`)} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">Edit Chart</button>
                     <button onClick={() => navigate(`/songs/${song._id}/edit`)} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">Edit</button>
                     <button onClick={() => setConfirmDelete(song)} className="text-xs text-red-400 hover:text-red-300 transition-colors">Delete</button>
                   </td>
