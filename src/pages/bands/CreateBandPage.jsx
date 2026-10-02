@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { createBand } from '../../api/bands'
+import { bandErrorMessage } from '../../constants/bandErrors'
 import { useRefreshMembership } from './refreshMembership'
 
 const inputCls =
@@ -32,11 +33,7 @@ export default function CreateBandPage() {
       // then land on the band's songs view.
       await refreshMembershipAndGo('/songs', { selectBandId: newBandId })
     } catch (err) {
-      setError(
-        err?.response?.data?.error?.message ||
-          err?.response?.data?.message ||
-          'Failed to create band.'
-      )
+      setError(bandErrorMessage(err, 'Failed to create band.'))
       setSubmitting(false)
     }
   }

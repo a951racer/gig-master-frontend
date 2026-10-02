@@ -5,6 +5,7 @@ import { useBand } from '../../../auth/BandContext'
 import { useAuth } from '../../../auth/AuthContext'
 import { userLabel } from '../../../constants/users'
 import { AdminTable, Modal, inputCls, btnPrimary, errMsg } from '../components/AdminUI'
+import { bandErrorMessage } from '../../../constants/bandErrors'
 
 // Sysadmin Bands page (#56): a table of bands with a Create Band action. Row
 // click navigates to the band detail page (#57) where management happens. Gated
@@ -131,7 +132,7 @@ function CreateBandModal({ users, currentUserId, refresh, onClose, onCreated }) 
       }
       await onCreated()
     } catch (err) {
-      setError(errMsg(err, 'Failed to create band.'))
+      setError(bandErrorMessage(err, 'Failed to create band.'))
       setSaving(false)
     }
   }
