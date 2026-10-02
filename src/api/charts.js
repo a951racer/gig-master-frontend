@@ -32,8 +32,8 @@ export const viewChart = (songId, { key } = {}) =>
 // a working (un-saved) body plus how to interpret it (`enteredKey`) and how to
 // render it (`displayedKey`); returns the Render_Representation without saving
 // (R8.4; design "Frontend — Editor" live preview).
-export const previewChart = (songId, { body, enteredKey, displayedKey }) =>
-  api.post(`/songs/${songId}/chart/view`, { body, enteredKey, displayedKey })
+export const previewChart = (songId, { body, enteredKey, displayedKey, formatting }) =>
+  api.post(`/songs/${songId}/chart/view`, { body, enteredKey, displayedKey, formatting })
 
 // GET /playlists/:id/charts?key=<Numbers|KEY> — batch Render_Representation for
 // a playlist's songs; un-charted songs carry `null` (R10).
