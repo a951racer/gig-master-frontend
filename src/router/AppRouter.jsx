@@ -13,6 +13,8 @@ import ResetPasswordPage from '../pages/auth/ResetPasswordPage'
 import { lazy, Suspense } from 'react'
 const SongListPage = lazy(() => import('../pages/songs/SongListPage'))
 const SongFormPage = lazy(() => import('../pages/songs/SongFormPage'))
+const ChartViewerPage = lazy(() => import('../pages/charts/ChartViewerPage'))
+const ChartEditorPage = lazy(() => import('../pages/charts/ChartEditorPage'))
 const PlaylistListPage = lazy(() => import('../pages/playlists/PlaylistListPage'))
 const PlaylistDetailPage = lazy(() => import('../pages/playlists/PlaylistDetailPage'))
 const PlaylistFormPage = lazy(() => import('../pages/playlists/PlaylistFormPage'))
@@ -85,6 +87,8 @@ export default function AppRouter() {
               <Route path="/songs" element={<ProtectedRoute><SongListPage /></ProtectedRoute>} />
               <Route path="/songs/new" element={<ProtectedRoute><SongFormPage /></ProtectedRoute>} />
               <Route path="/songs/:id/edit" element={<ProtectedRoute><SongFormPage /></ProtectedRoute>} />
+              <Route path="/songs/:id/chart" element={<ProtectedRoute><ChartViewerPage /></ProtectedRoute>} />
+              <Route path="/songs/:id/chart/edit" element={<ProtectedRoute><ChartEditorPage /></ProtectedRoute>} />
               <Route path="/playlists" element={<ProtectedRoute><PlaylistListPage /></ProtectedRoute>} />
               <Route path="/playlists/new" element={<ProtectedRoute><PlaylistFormPage /></ProtectedRoute>} />
               <Route path="/playlists/:id" element={<ProtectedRoute><PlaylistDetailPage /></ProtectedRoute>} />

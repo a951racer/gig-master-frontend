@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { viewChart } from '../../api/charts'
+import { viewChart, downloadChartPdf } from '../../api/charts'
 import { useBand } from '../../auth/BandContext'
 
 // On-screen chart viewer (R12). Renders the API Render_Representation with a
@@ -112,6 +112,12 @@ export default function ChartViewerPage() {
   const [error, setError] = useState('')
   const [notFound, setNotFound] = useState(false)
 
+  // Download state (R13). The PDF is fetched as a Blob through the authenticated
+  // axios instance (downloadChartPdf) so the Authorization + X-Band-Id headers
+  // ride along — a plain anchor href to the PDF URL could not carry those.
+  const [downloading, setDownloading] = useState(false)
+  const [downloadError, setDownloadError] = useState('')
+
   // Fetch on mount and whenever the Key selection (or band / song) changes.
   // `Numbers` is a valid value the API understands, so it is passed through as-is.
   useEffect(() => {
@@ -142,6 +148,33 @@ export default function ChartViewerPage() {
       active = false
     }
   }, [songId, keySelection, currentBand?.id])
+
+  // Fetch the PDF for the current Key selection as a Blob (auth-safe path),
+  // then trigger a browser download via a temporary <a>. The download filename
+  // is derived from the chart title, falling back to "chart.pdf".
+  const handleDownloadPdf = async () => {
+    setDownloading(true)
+    setDownloadError('')
+    let objectUrl
+    try {
+      const res = await downloadChartPdf(songId, { key: keySelection })
+      const blob = res.data instanceof Blob ? res.data : new Blob([res.data], { type: 'application/pdf' })
+      objectUrl = URL.createObjectURL(blob)
+      const safeTitle = (chart?.title || '').trim().replace(/[\\/:*?"<>|]+/g, '_')
+      const filename = safeTitle ? `${safeTitle}.pdf` : 'chart.pdf'
+      const a = document.createElement('a')
+      a.href = objectUrl
+      a.download = filename
+      document.body.appendChild(a)
+      a.click()
+      a.remove()
+    } catch (err) {
+      setDownloadError(err?.response?.data?.error?.message || 'Failed to download PDF')
+    } finally {
+      if (objectUrl) URL.revokeObjectURL(objectUrl)
+      setDownloading(false)
+    }
+  }
 
   const chordColor = resolveChordColor(chart?.formatting?.chordColor)
   const columns = chart?.formatting?.columns === 2 ? 2 : 1
@@ -176,16 +209,35 @@ export default function ChartViewerPage() {
             ))}
           </select>
         </label>
-        {/* Download PDF is wired in task 11.1 — stub only, intentionally disabled. */}
+        {/* Download PDF (R13): enabled only when a chart exists. Fetches the PDF
+            as a Blob through the authenticated axios instance and triggers a
+            browser download. Disabled while a request is in flight. */}
         <button
           type="button"
-          disabled
-          title="PDF download coming soon"
-          className="text-sm text-gray-500 border border-purple-800/40 px-3 py-2 rounded-lg cursor-not-allowed"
+          onClick={handleDownloadPdf}
+          disabled={!chart || downloading}
+          title={chart ? 'Download this chart as a PDF' : 'No chart to download'}
+          className={
+            !chart || downloading
+              ? 'text-sm text-gray-500 border border-purple-800/40 px-3 py-2 rounded-lg cursor-not-allowed inline-flex items-center gap-2'
+              : 'text-sm text-white border border-purple-800/40 hover:bg-purple-800/30 px-3 py-2 rounded-lg transition-colors inline-flex items-center gap-2'
+          }
         >
-          Download PDF
+          {downloading && (
+            <span
+              className="h-3.5 w-3.5 rounded-full border-2 border-purple-300/40 border-t-purple-300 animate-spin"
+              aria-hidden="true"
+            />
+          )}
+          {downloading ? 'Preparing…' : 'Download PDF'}
         </button>
       </div>
+
+      {downloadError && (
+        <p role="alert" className="text-red-400 text-sm mb-4 bg-red-900/20 border border-red-800/40 rounded-lg px-3 py-2">
+          {downloadError}
+        </p>
+      )}
 
       {error && (
         <p role="alert" className="text-red-400 text-sm mb-4 bg-red-900/20 border border-red-800/40 rounded-lg px-3 py-2">
