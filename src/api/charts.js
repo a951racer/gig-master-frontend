@@ -13,9 +13,10 @@ export const getChart = (songId) =>
 // PUT /songs/:id/chart — create or replace the chart (upsert, 1:1 per song).
 // `enteredKey` tells the server how to interpret `body`: "Numbers" stores the
 // ChordPro body as-is; a key name runs names→numbers before storing (R7.1,
-// R7.4, R3, R4).
-export const saveChart = (songId, { enteredKey, body, title, artistLabel, formatting }) =>
-  api.put(`/songs/${songId}/chart`, { enteredKey, body, title, artistLabel, formatting })
+// R7.4, R3, R4). Title and artist are Song properties and are NOT chart-
+// overridable, so they are never part of this payload.
+export const saveChart = (songId, { enteredKey, body, formatting }) =>
+  api.put(`/songs/${songId}/chart`, { enteredKey, body, formatting })
 
 // DELETE /songs/:id/chart — remove the chart (R7.3).
 export const deleteChart = (songId) =>

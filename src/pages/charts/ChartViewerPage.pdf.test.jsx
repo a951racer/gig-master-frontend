@@ -40,7 +40,7 @@ const renderPage = () => render(<MemoryRouter><ChartViewerPage /></MemoryRouter>
 // download filename.
 const numbersRepresentation = {
   title: 'Amazing Grace',
-  artistLabel: 'John Newton',
+  artist: 'John Newton',
   keyLabel: 'Numbers',
   formatting: { font: 'monospace', size: 11, chordColor: 'blue', columns: 1 },
   sections: [
@@ -53,6 +53,26 @@ const numbersRepresentation = {
             { chord: '1', lyric: 'A' },
             { chord: '4', lyric: 'ma' },
             { chord: '1', lyric: 'zing grace' },
+          ],
+        },
+      ],
+    },
+  ],
+  pages: [
+    {
+      columns: [
+        {
+          lines: [
+            { header: { label: 'Verse 1', repeat: null } },
+            {
+              segments: [
+                { chord: '1', lyric: 'A' },
+                { chord: '4', lyric: 'ma' },
+                { chord: '1', lyric: 'zing grace' },
+              ],
+              directive: null,
+              transposeShift: null,
+            },
           ],
         },
       ],
