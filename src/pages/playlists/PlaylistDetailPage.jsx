@@ -7,11 +7,21 @@ import {
   SortableContext, verticalListSortingStrategy, useSortable, arrayMove,
 } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
-import { getPlaylist, addSong, removeSong, reorderSongs } from '../../api/playlists'
+import { getPlaylist, addSong, removeSong, reorderSongs, setPlayedKey } from '../../api/playlists'
 import SongCatalogPanel from '../../components/SongCatalogPanel'
 import { useBand } from '../../auth/BandContext'
 
-function SortableSongItem({ song, index, onRemove }) {
+// The playlist's `songs` is a subdocument array: each entry is
+// { song: <populated song>, playedKey }. Played Key is the key THIS playlist
+// performs the song in (a song can have a different played key per playlist).
+// It is one of the 12 supported MAJOR keys or '' (unset) — never "Numbers".
+const KEY_OPTIONS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb', 'B']
+
+const keySelectCls =
+  'bg-[#1e1b2e] border border-purple-800/40 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-600'
+
+function SortableSongItem({ entry, index, onRemove, onKeyChange }) {
+  const song = entry.song
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: `playlist-${song._id}`,
     data: { song, source: 'playlist' },
@@ -21,14 +31,33 @@ function SortableSongItem({ song, index, onRemove }) {
     <div
       ref={setNodeRef}
       style={{ transform: CSS.Transform.toString(transform), transition }}
-      className={`flex items-center gap-3 bg-[#2a2640] border border-purple-800/30 rounded-lg px-3 py-2.5 mb-1.5 cursor-grab select-none transition-opacity ${isDragging ? 'opacity-40' : 'hover:border-purple-500/60'}`}
-      {...attributes} {...listeners}
+      className={`flex items-center gap-3 bg-[#2a2640] border border-purple-800/30 rounded-lg px-3 py-2.5 mb-1.5 select-none transition-opacity ${isDragging ? 'opacity-40' : 'hover:border-purple-500/60'}`}
     >
-      <span className="text-gray-600 text-xs w-5 text-right shrink-0">{index + 1}</span>
+      {/* Drag handle — only this grabs, so the Played Key control stays usable */}
+      <span
+        className="text-gray-600 text-xs w-5 text-right shrink-0 cursor-grab"
+        {...attributes} {...listeners}
+      >{index + 1}</span>
       <div className="flex-1 min-w-0">
         <p className="text-white text-sm font-medium truncate">{song.title}</p>
         <p className="text-gray-400 text-xs truncate">{song.artist}</p>
       </div>
+
+      {/* Played Key selector for this song in this playlist. */}
+      <label className="flex items-center gap-1.5 shrink-0" title="Played Key for this playlist">
+        <span className="text-[10px] uppercase tracking-wide text-gray-500">Key</span>
+        <select
+          aria-label={`Played key for ${song.title}`}
+          className={keySelectCls}
+          value={entry.playedKey || ''}
+          onPointerDown={e => e.stopPropagation()}
+          onChange={e => onKeyChange(song._id, e.target.value)}
+        >
+          <option value="">—</option>
+          {KEY_OPTIONS.map(k => <option key={k} value={k}>{k}</option>)}
+        </select>
+      </label>
+
       <button
         onPointerDown={e => e.stopPropagation()}
         onClick={() => onRemove(song)}
@@ -61,7 +90,8 @@ export default function PlaylistDetailPage() {
   const navigate = useNavigate()
   const { currentBand } = useBand()
   const [playlist, setPlaylist] = useState(null)
-  const [playlistSongs, setPlaylistSongs] = useState([])
+  // entries: array of { song: <populated song>, playedKey }
+  const [entries, setEntries] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeItem, setActiveItem] = useState(null)
@@ -71,7 +101,7 @@ export default function PlaylistDetailPage() {
   useEffect(() => {
     setLoading(true)
     getPlaylist(id)
-      .then(res => { setPlaylist(res.data); setPlaylistSongs(res.data.songs || []) })
+      .then(res => { setPlaylist(res.data); setEntries(res.data.songs || []) })
       .catch(() => setError('Failed to load playlist'))
       .finally(() => setLoading(false))
   }, [id, currentBand?.id])
@@ -87,46 +117,54 @@ export default function PlaylistDetailPage() {
 
     if (activeData?.source === 'catalog') {
       const song = activeData.song
-      if (playlistSongs.some(s => s._id === song._id)) return
-      const prev = [...playlistSongs]
-      setPlaylistSongs(p => [...p, song])
+      if (entries.some(e => e.song._id === song._id)) return
+      const prev = [...entries]
+      setEntries(p => [...p, { song, playedKey: '' }])
       try { await addSong(id, song._id) }
-      catch { setPlaylistSongs(prev); setError('Failed to add song') }
+      catch { setEntries(prev); setError('Failed to add song') }
       return
     }
 
     if (activeData?.source === 'playlist' && overId === 'catalog-drop-zone') {
       const song = activeData.song
-      const prev = [...playlistSongs]
-      setPlaylistSongs(p => p.filter(s => s._id !== song._id))
+      const prev = [...entries]
+      setEntries(p => p.filter(e => e.song._id !== song._id))
       try { await removeSong(id, song._id) }
-      catch { setPlaylistSongs(prev); setError('Failed to remove song') }
+      catch { setEntries(prev); setError('Failed to remove song') }
       return
     }
 
     if (activeData?.source === 'playlist' && overData?.source === 'playlist') {
-      const oldIdx = playlistSongs.findIndex(s => `playlist-${s._id}` === active.id)
-      const newIdx = playlistSongs.findIndex(s => `playlist-${s._id}` === overId)
+      const oldIdx = entries.findIndex(e => `playlist-${e.song._id}` === active.id)
+      const newIdx = entries.findIndex(e => `playlist-${e.song._id}` === overId)
       if (oldIdx === newIdx) return
-      const newOrder = arrayMove(playlistSongs, oldIdx, newIdx)
-      const prev = [...playlistSongs]
-      setPlaylistSongs(newOrder)
-      try { await reorderSongs(id, newOrder.map(s => s._id)) }
-      catch { setPlaylistSongs(prev); setError('Failed to reorder songs') }
+      const newOrder = arrayMove(entries, oldIdx, newIdx)
+      const prev = [...entries]
+      setEntries(newOrder)
+      try { await reorderSongs(id, newOrder.map(e => e.song._id)) }
+      catch { setEntries(prev); setError('Failed to reorder songs') }
     }
   }
 
   const handleRemove = async (song) => {
-    const prev = [...playlistSongs]
-    setPlaylistSongs(p => p.filter(s => s._id !== song._id))
+    const prev = [...entries]
+    setEntries(p => p.filter(e => e.song._id !== song._id))
     try { await removeSong(id, song._id) }
-    catch { setPlaylistSongs(prev); setError('Failed to remove song') }
+    catch { setEntries(prev); setError('Failed to remove song') }
+  }
+
+  // Optimistically update the song's played key, persisting via the API.
+  const handleKeyChange = async (songId, playedKey) => {
+    const prev = entries
+    setEntries(p => p.map(e => (e.song._id === songId ? { ...e, playedKey } : e)))
+    try { await setPlayedKey(id, songId, playedKey) }
+    catch { setEntries(prev); setError('Failed to update played key') }
   }
 
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>
   if (!playlist) return <div className="text-center py-16 text-gray-500">Playlist not found</div>
 
-  const playlistSongIds = playlistSongs.map(s => s._id)
+  const playlistSongIds = entries.map(e => e.song._id)
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
@@ -145,14 +183,14 @@ export default function PlaylistDetailPage() {
 
       <DndContext sensors={sensors} onDragStart={handleDragStart} onDragEnd={handleDragEnd}>
         <div className="flex gap-4 items-start">
-          <PlaylistDropZone isEmpty={playlistSongs.length === 0}>
+          <PlaylistDropZone isEmpty={entries.length === 0}>
             <div className="flex items-center justify-between mb-3">
               <h3 className="text-sm font-semibold text-gray-300">Set List</h3>
-              <span className="text-xs text-gray-500 bg-[#2a2640] px-2 py-0.5 rounded-full">{playlistSongs.length} songs</span>
+              <span className="text-xs text-gray-500 bg-[#2a2640] px-2 py-0.5 rounded-full">{entries.length} songs</span>
             </div>
-            <SortableContext items={playlistSongs.map(s => `playlist-${s._id}`)} strategy={verticalListSortingStrategy}>
-              {playlistSongs.map((song, i) => (
-                <SortableSongItem key={song._id} song={song} index={i} onRemove={handleRemove} />
+            <SortableContext items={entries.map(e => `playlist-${e.song._id}`)} strategy={verticalListSortingStrategy}>
+              {entries.map((entry, i) => (
+                <SortableSongItem key={entry.song._id} entry={entry} index={i} onRemove={handleRemove} onKeyChange={handleKeyChange} />
               ))}
             </SortableContext>
           </PlaylistDropZone>

@@ -57,7 +57,7 @@ describe('PlaylistListPage copy (#2)', () => {
   it('copying fetches the source songs and creates a new playlist, then navigates to it', async () => {
     const user = userEvent.setup()
     getPlaylist.mockResolvedValueOnce({
-      data: { _id: 'p1', name: 'Summer Set', songs: [{ _id: 's1' }, { _id: 's2' }] },
+      data: { _id: 'p1', name: 'Summer Set', songs: [{ song: { _id: 's1' }, playedKey: 'G' }, { song: { _id: 's2' }, playedKey: '' }] },
     })
     createPlaylist.mockResolvedValueOnce({ data: { _id: 'p9', name: 'Copy of Summer Set' } })
 
@@ -73,7 +73,10 @@ describe('PlaylistListPage copy (#2)', () => {
       expect(createPlaylist).toHaveBeenCalledWith({
         name: 'Copy of Summer Set',
         description: '** Duplicate **',
-        songs: ['s1', 's2'],
+        songs: [
+          { song: 's1', playedKey: 'G' },
+          { song: 's2', playedKey: '' },
+        ],
       })
     })
     await waitFor(() => expect(navigateMock).toHaveBeenCalledWith('/playlists/p9'))
@@ -81,7 +84,7 @@ describe('PlaylistListPage copy (#2)', () => {
 
   it('lets the user edit the name/description before copying', async () => {
     const user = userEvent.setup()
-    getPlaylist.mockResolvedValueOnce({ data: { _id: 'p1', songs: ['s1'] } })
+    getPlaylist.mockResolvedValueOnce({ data: { _id: 'p1', songs: [{ song: { _id: 's1' }, playedKey: '' }] } })
     createPlaylist.mockResolvedValueOnce({ data: { _id: 'p9' } })
 
     renderPage()
@@ -95,7 +98,7 @@ describe('PlaylistListPage copy (#2)', () => {
     await user.click(within(dialog).getByRole('button', { name: /copy playlist/i }))
 
     await waitFor(() => {
-      expect(createPlaylist).toHaveBeenCalledWith(expect.objectContaining({ name: 'Winter Set', songs: ['s1'] }))
+      expect(createPlaylist).toHaveBeenCalledWith(expect.objectContaining({ name: 'Winter Set', songs: [{ song: 's1', playedKey: '' }] }))
     })
   })
 
@@ -115,7 +118,7 @@ describe('PlaylistListPage copy (#2)', () => {
 
   it('shows a friendly message when copying to a duplicate name (409)', async () => {
     const user = userEvent.setup()
-    getPlaylist.mockResolvedValueOnce({ data: { _id: 'p1', songs: ['s1'] } })
+    getPlaylist.mockResolvedValueOnce({ data: { _id: 'p1', songs: [{ song: { _id: 's1' }, playedKey: '' }] } })
     createPlaylist.mockRejectedValueOnce({ response: { data: { error: { code: 'DUPLICATE_NAME' } } } })
 
     renderPage()

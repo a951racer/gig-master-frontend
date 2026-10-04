@@ -15,8 +15,13 @@ export const updatePlaylist = (id, data) =>
 export const deletePlaylist = (id) =>
   api.delete(`/playlists/${id}`)
 
-export const addSong = (playlistId, songId) =>
-  api.post(`/playlists/${playlistId}/songs`, { songId })
+export const addSong = (playlistId, songId, playedKey) =>
+  api.post(`/playlists/${playlistId}/songs`, playedKey !== undefined ? { songId, playedKey } : { songId })
+
+// Set/clear a song's Played Key within a playlist. playedKey is a supported
+// major key or '' to clear (never "Numbers").
+export const setPlayedKey = (playlistId, songId, playedKey) =>
+  api.patch(`/playlists/${playlistId}/songs/${songId}`, { playedKey })
 
 export const removeSong = (playlistId, songId) =>
   api.delete(`/playlists/${playlistId}/songs/${songId}`)
