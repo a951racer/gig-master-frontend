@@ -83,7 +83,28 @@ describe('PlaylistDetailPage — Played Key (#84)', () => {
     expect(values).not.toContain('Numbers')
   })
 
-  it('reverts the key on API failure', async () => {
+  it('does not crash on a LEGACY playlist whose songs are populated song docs (no wrapper)', async () => {
+    // Pre-migration data: songs is a flat array of populated song documents,
+    // not { song, playedKey } entries. The page must render them (keyless),
+    // not throw on e.song._id.
+    getPlaylist.mockResolvedValueOnce({
+      data: {
+        _id: 'pl1',
+        name: 'Legacy Set',
+        songs: [
+          { _id: 's1', title: 'Alpha', artist: 'A' },
+          { _id: 's2', title: 'Beta', artist: 'B' },
+        ],
+      },
+    })
+    renderPage()
+    expect(await screen.findByText('Alpha')).toBeInTheDocument()
+    expect(screen.getByText('Beta')).toBeInTheDocument()
+    // Keyless → selectors default to the blank clear option.
+    expect(screen.getByLabelText('Played key for Alpha')).toHaveValue('')
+  })
+
+    it('reverts the key on API failure', async () => {
     const user = userEvent.setup()
     setPlayedKey.mockRejectedValueOnce(new Error('nope'))
     renderPage()

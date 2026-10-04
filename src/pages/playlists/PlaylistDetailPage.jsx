@@ -20,6 +20,31 @@ const KEY_OPTIONS = ['C', 'Db', 'D', 'Eb', 'E', 'F', 'Gb', 'G', 'Ab', 'A', 'Bb',
 const keySelectCls =
   'bg-[#1e1b2e] border border-purple-800/40 rounded px-2 py-1 text-xs text-white focus:outline-none focus:ring-1 focus:ring-purple-600'
 
+// Normalize the API's `songs` into a consistent [{ song, playedKey }] list the
+// rest of this page relies on. Tolerates:
+//   - new shape, populated:   { song: { _id, title, ... }, playedKey }
+//   - new shape, unpopulated: { song: '<id>', playedKey }  (dropped — can't render)
+//   - LEGACY pre-migration:   a populated song doc { _id, title, ... }  (no wrapper)
+//   - legacy bare id string / ObjectId                     (dropped — can't render)
+// Entries we can't render (no title) are dropped rather than crashing the page.
+// Pre-existing playlists created before the Played Key migration land here;
+// run the server migration (migratePlaylistSongsToPlayedKey) to convert them.
+function normalizeEntries(songs) {
+  if (!Array.isArray(songs)) return []
+  const out = []
+  for (const raw of songs) {
+    if (raw && typeof raw === 'object' && raw.song && typeof raw.song === 'object') {
+      // New shape, populated song.
+      out.push({ song: raw.song, playedKey: raw.playedKey || '' })
+    } else if (raw && typeof raw === 'object' && (raw.title !== undefined || raw.artist !== undefined)) {
+      // Legacy: a populated song document with no { song, playedKey } wrapper.
+      out.push({ song: raw, playedKey: raw.playedKey || '' })
+    }
+    // else: bare id / unpopulated reference — nothing to render; skip.
+  }
+  return out
+}
+
 function SortableSongItem({ entry, index, onRemove, onKeyChange }) {
   const song = entry.song
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
@@ -101,7 +126,7 @@ export default function PlaylistDetailPage() {
   useEffect(() => {
     setLoading(true)
     getPlaylist(id)
-      .then(res => { setPlaylist(res.data); setEntries(res.data.songs || []) })
+      .then(res => { setPlaylist(res.data); setEntries(normalizeEntries(res.data.songs)) })
       .catch(() => setError('Failed to load playlist'))
       .finally(() => setLoading(false))
   }, [id, currentBand?.id])
