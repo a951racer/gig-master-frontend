@@ -39,8 +39,17 @@ export default function PlaylistListPage() {
   const handleCopy = async ({ name, description }) => {
     const source = copySource
     const res = await getPlaylist(source._id)
-    const songIds = (res.data.songs || []).map(sg => (typeof sg === 'string' ? sg : sg._id))
-    const created = await createPlaylist({ name, description, songs: songIds })
+    // songs are { song: <populated song>, playedKey } entries; carry both the
+    // song id and its played key across to the copy. Tolerate legacy/bare-id
+    // shapes defensively.
+    const songs = (res.data.songs || []).map(sg => {
+      if (sg && typeof sg === 'object' && sg.song) {
+        const songId = typeof sg.song === 'string' ? sg.song : sg.song._id
+        return { song: songId, playedKey: sg.playedKey || '' }
+      }
+      return typeof sg === 'string' ? sg : sg._id
+    })
+    const created = await createPlaylist({ name, description, songs })
     setCopySource(null)
     navigate(`/playlists/${created.data._id}`)
   }
