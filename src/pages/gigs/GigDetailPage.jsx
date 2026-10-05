@@ -66,13 +66,18 @@ export default function GigDetailPage() {
             <p className="text-purple-300 font-medium mb-3">{gig.playlist.name}</p>
             {gig.playlist.songs?.length > 0 ? (
               <ol className="space-y-2">
-                {gig.playlist.songs.map((song, i) => (
-                  <li key={song._id} className="flex items-center gap-3 text-sm">
-                    <span className="text-gray-600 w-5 text-right shrink-0">{i + 1}</span>
-                    <span className="text-white font-medium">{song.title}</span>
-                    <span className="text-gray-400">— {song.artist}</span>
-                  </li>
-                ))}
+                {gig.playlist.songs.map((entry, i) => {
+                  // Each entry is { song: <populated song>, playedKey } (#72).
+                  // Tolerate a legacy bare-song shape defensively.
+                  const song = entry?.song ?? entry
+                  return (
+                    <li key={song?._id ?? i} className="flex items-center gap-3 text-sm">
+                      <span className="text-gray-600 w-5 text-right shrink-0">{i + 1}</span>
+                      <span className="text-white font-medium">{song?.title ?? '—'}</span>
+                      {song?.artist && <span className="text-gray-400">— {song.artist}</span>}
+                    </li>
+                  )
+                })}
               </ol>
             ) : (
               <p className="text-gray-500 text-sm">No songs in this setlist</p>
