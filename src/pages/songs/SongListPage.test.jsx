@@ -36,12 +36,19 @@ describe('SongListPage — slimmed actions (#83)', () => {
     expect(link).toHaveAttribute('href', '/songs/s1')
   })
 
-  it('the row Actions contain ONLY Delete (no Chart / Edit Chart / Edit)', async () => {
+  it('the row Actions are a Chart link (to the viewer) and a Delete button — no Edit / Edit Chart', async () => {
     renderPage()
     const row = (await screen.findByRole('link', { name: 'Alpha' })).closest('tr')
+
+    // Chart action is a link to the chart VIEWER (not the editor).
+    const chart = within(row).getByRole('link', { name: 'Chart' })
+    expect(chart).toHaveAttribute('href', '/songs/s1/chart')
+
+    // Delete is the only button.
     const buttons = within(row).getAllByRole('button').map(b => b.textContent)
     expect(buttons).toEqual(['Delete'])
-    expect(within(row).queryByText('Chart')).not.toBeInTheDocument()
+
+    // No Edit / Edit Chart affordances.
     expect(within(row).queryByText('Edit Chart')).not.toBeInTheDocument()
     expect(within(row).queryByText('Edit')).not.toBeInTheDocument()
   })
