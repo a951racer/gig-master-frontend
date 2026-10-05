@@ -60,7 +60,7 @@ export default function GigDetailPage() {
       </div>
 
       <div className="bg-[#2a2640] border border-purple-800/30 rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Playlist</h2>
+        <h2 className="text-lg font-semibold text-white mb-4">Setlist</h2>
         {gig.playlist ? (
           <>
             <p className="text-purple-300 font-medium mb-3">{gig.playlist.name}</p>
@@ -75,11 +75,11 @@ export default function GigDetailPage() {
                 ))}
               </ol>
             ) : (
-              <p className="text-gray-500 text-sm">No songs in this playlist</p>
+              <p className="text-gray-500 text-sm">No songs in this setlist</p>
             )}
           </>
         ) : (
-          <p className="text-gray-500 text-sm">No playlist assigned</p>
+          <p className="text-gray-500 text-sm">No setlist assigned</p>
         )}
       </div>
     </div>

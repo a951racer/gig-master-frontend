@@ -20,7 +20,7 @@ export default function PlaylistListPage() {
     setError('')
     listPlaylists()
       .then(res => setPlaylists(res.data))
-      .catch(() => setError('Failed to load playlists'))
+      .catch(() => setError('Failed to load setlists'))
       .finally(() => setLoading(false))
   }, [hasNoBand, currentBand?.id])
 
@@ -28,7 +28,7 @@ export default function PlaylistListPage() {
     try {
       await deletePlaylist(playlist._id)
       setPlaylists(prev => prev.filter(p => p._id !== playlist._id))
-    } catch { setError('Failed to delete playlist') }
+    } catch { setError('Failed to delete setlist') }
     finally { setConfirmDelete(null) }
   }
 
@@ -65,10 +65,10 @@ export default function PlaylistListPage() {
   return (
     <div className="max-w-4xl mx-auto px-6 py-8">
       <div className="flex items-center justify-between mb-6">
-        <h1 className="text-2xl font-bold text-white">Playlists</h1>
+        <h1 className="text-2xl font-bold text-white">Setlists</h1>
         <Link to="/playlists/new">
           <button className="bg-purple-700 hover:bg-purple-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-            + New Playlist
+            + New Setlist
           </button>
         </Link>
       </div>
@@ -80,7 +80,7 @@ export default function PlaylistListPage() {
       ) : playlists.length === 0 ? (
         <div className="text-center py-16 text-gray-500">
           <div className="text-4xl mb-3">🎼</div>
-          <p>No playlists yet. Create your first set list!</p>
+          <p>No setlists yet. Create your first setlist!</p>
         </div>
       ) : (
         <div className="space-y-3">
@@ -107,7 +107,7 @@ export default function PlaylistListPage() {
 
       {confirmDelete && (
         <ConfirmDialog
-          message={`Delete playlist "${confirmDelete.name}"?`}
+          message={`Delete setlist "${confirmDelete.name}"?`}
           onConfirm={() => handleDelete(confirmDelete)}
           onCancel={() => setConfirmDelete(null)}
         />
@@ -145,9 +145,9 @@ function CopyPlaylistModal({ source, onCopy, onCancel }) {
     } catch (err) {
       const code = err?.response?.data?.error?.code
       if (code === 'DUPLICATE_NAME') {
-        setError('Playlist names must be unique within your band. Please choose a different name.')
+        setError('Setlist names must be unique within your band. Please choose a different name.')
       } else {
-        setError(err?.response?.data?.error?.message || 'Failed to copy playlist.')
+        setError(err?.response?.data?.error?.message || 'Failed to copy setlist.')
       }
     } finally {
       setSaving(false)
@@ -159,21 +159,21 @@ function CopyPlaylistModal({ source, onCopy, onCancel }) {
       className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 px-4"
       onMouseDown={(e) => { if (e.target === e.currentTarget) onCancel() }}
     >
-      <div role="dialog" aria-modal="true" aria-label="Copy playlist" className="w-full max-w-md bg-[#2a2640] border border-purple-800/50 rounded-2xl p-6 shadow-2xl">
-        <h2 className="text-lg font-semibold text-white mb-4">Copy playlist</h2>
+      <div role="dialog" aria-modal="true" aria-label="Copy setlist" className="w-full max-w-md bg-[#2a2640] border border-purple-800/50 rounded-2xl p-6 shadow-2xl">
+        <h2 className="text-lg font-semibold text-white mb-4">Copy setlist</h2>
         <form onSubmit={handleSubmit} className="flex flex-col gap-3">
           <label className="text-sm text-gray-300">
             Name
-            <input aria-label="New playlist name" value={name} onChange={(e) => setName(e.target.value)} className={inputCls + ' mt-1'} autoFocus />
+            <input aria-label="New setlist name" value={name} onChange={(e) => setName(e.target.value)} className={inputCls + ' mt-1'} autoFocus />
           </label>
           <label className="text-sm text-gray-300">
             Description
-            <input aria-label="New playlist description" value={description} onChange={(e) => setDescription(e.target.value)} className={inputCls + ' mt-1'} />
+            <input aria-label="New setlist description" value={description} onChange={(e) => setDescription(e.target.value)} className={inputCls + ' mt-1'} />
           </label>
           {error && <p role="alert" className="text-red-400 text-sm">{error}</p>}
           <div className="flex items-center gap-3 mt-1">
             <button type="submit" disabled={saving} className="bg-purple-700 hover:bg-purple-600 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
-              {saving ? 'Copying…' : 'Copy playlist'}
+              {saving ? 'Copying…' : 'Copy setlist'}
             </button>
             <button type="button" onClick={onCancel} className="text-sm text-gray-400 hover:text-white px-3 py-2">Cancel</button>
           </div>

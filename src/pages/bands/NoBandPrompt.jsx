@@ -6,7 +6,7 @@ import { Link } from 'react-router-dom'
 // in the no-band state).
 export default function NoBandPrompt({
   title = 'You are not in a band yet',
-  message = 'Create a new band to start managing songs, playlists, and gigs, or request to join an existing band.',
+  message = 'Create a new band to start managing songs, setlists, and gigs, or request to join an existing band.',
 }) {
   return (
     <div className="bg-[#2a2640] border border-purple-800/30 rounded-xl px-6 py-8 text-center">
