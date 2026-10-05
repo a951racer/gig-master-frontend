@@ -21,6 +21,7 @@ const PlaylistDetailPage = lazy(() => import('../pages/playlists/PlaylistDetailP
 const PlaylistFormPage = lazy(() => import('../pages/playlists/PlaylistFormPage'))
 const GigListPage = lazy(() => import('../pages/gigs/GigListPage'))
 const GigDetailPage = lazy(() => import('../pages/gigs/GigDetailPage'))
+const GigChartsPage = lazy(() => import('../pages/gigs/GigChartsPage'))
 const GigFormPage = lazy(() => import('../pages/gigs/GigFormPage'))
 
 // Band member pages
@@ -97,6 +98,7 @@ export default function AppRouter() {
               <Route path="/gigs" element={<ProtectedRoute><GigListPage /></ProtectedRoute>} />
               <Route path="/gigs/new" element={<ProtectedRoute><GigFormPage /></ProtectedRoute>} />
               <Route path="/gigs/:id/edit" element={<ProtectedRoute><GigFormPage /></ProtectedRoute>} />
+              <Route path="/gigs/:id/charts" element={<ProtectedRoute><GigChartsPage /></ProtectedRoute>} />
               <Route path="/gigs/:id" element={<ProtectedRoute><GigDetailPage /></ProtectedRoute>} />
 
               {/* Self-service profile */}
