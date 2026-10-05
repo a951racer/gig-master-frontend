@@ -68,3 +68,21 @@ export const chartPdfUrl = (songId, { key } = {}) => {
 // into an object URL to trigger a download (R13). This is the auth-safe path.
 export const downloadChartPdf = (songId, { key } = {}) =>
   api.get(`/songs/${songId}/chart/pdf`, { params: { key }, responseType: 'blob' })
+
+// --- Gig/setlist "all charts" (frontend #85 / api #77) ---
+//
+// Per-song render selections: an array of { songId, mode } where mode is
+// 'Numbers' | 'Chords'. Songs omitted default to 'Numbers' server-side.
+
+// POST /playlists/:id/charts — batch render every song per its selection.
+// Returns { playlistId, charts: [{ songId, title, playedKey, chart|null }], truncated }.
+export const allCharts = (playlistId, { selections } = {}) =>
+  api.post(`/playlists/${playlistId}/charts`, { selections })
+
+// POST /playlists/:id/charts/pdf — combined PDF of the whole setlist (Blob).
+export const allChartsPdf = (playlistId, { selections } = {}) =>
+  api.post(`/playlists/${playlistId}/charts/pdf`, { selections }, { responseType: 'blob' })
+
+// POST /playlists/:id/charts/pdf-zip — one PDF per song, zipped (Blob).
+export const allChartsPdfZip = (playlistId, { selections } = {}) =>
+  api.post(`/playlists/${playlistId}/charts/pdf-zip`, { selections }, { responseType: 'blob' })

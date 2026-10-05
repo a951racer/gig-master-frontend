@@ -69,3 +69,49 @@ describe('GigDetailPage — setlist songs', () => {
     expect(await screen.findByText(/no songs in this setlist/i)).toBeInTheDocument()
   })
 })
+
+describe('GigDetailPage — Generate Charts button (#85)', () => {
+  it('is ENABLED and links to /gigs/:id/charts when the gig has a setlist with songs', async () => {
+    getGig.mockResolvedValue({
+      data: {
+        _id: 'gig-1',
+        name: 'Elder Care',
+        playlist: {
+          _id: 'pl1',
+          name: 'Nursing Home Gigs',
+          songs: [{ song: { _id: 's1', title: 'Bye Bye Love', artist: 'Everly Brothers' }, playedKey: 'A' }],
+        },
+      },
+    })
+
+    renderPage()
+
+    const link = await screen.findByRole('link', { name: /generate charts/i })
+    expect(link).toHaveAttribute('href', '/gigs/gig-1/charts')
+  })
+
+  it('is DISABLED (not a link) with a hint when the gig has no setlist', async () => {
+    getGig.mockResolvedValue({
+      data: { _id: 'gig-1', name: 'Open Mic', playlist: null },
+    })
+
+    renderPage()
+
+    // Rendered as a disabled button, not a navigable link.
+    const btn = await screen.findByRole('button', { name: /generate charts/i })
+    expect(btn).toBeDisabled()
+    expect(btn).toHaveAttribute('title', 'Assign a setlist first')
+    expect(screen.queryByRole('link', { name: /generate charts/i })).not.toBeInTheDocument()
+  })
+
+  it('is DISABLED when the gig has a setlist but no songs', async () => {
+    getGig.mockResolvedValue({
+      data: { _id: 'gig-1', name: 'Soundcheck', playlist: { _id: 'pl1', name: 'Empty', songs: [] } },
+    })
+
+    renderPage()
+
+    const btn = await screen.findByRole('button', { name: /generate charts/i })
+    expect(btn).toBeDisabled()
+  })
+})

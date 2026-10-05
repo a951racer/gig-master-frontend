@@ -26,6 +26,11 @@ export default function GigDetailPage() {
     ? new Date(gig.date).toLocaleDateString(undefined, { dateStyle: 'long' })
     : null
 
+  // "Generate Charts" is enabled only when the gig has a setlist with at least
+  // one song (#85). Otherwise the button is disabled with a hint. Clicking
+  // navigates to the setup/performance page at /gigs/:id/charts.
+  const hasSetlistSongs = Boolean(gig.playlist && gig.playlist.songs?.length > 0)
+
   return (
     <div className="max-w-2xl mx-auto px-6 py-8">
       <div className="flex items-center gap-3 mb-6">
@@ -60,7 +65,26 @@ export default function GigDetailPage() {
       </div>
 
       <div className="bg-[#2a2640] border border-purple-800/30 rounded-2xl p-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Setlist</h2>
+        <div className="flex items-center justify-between mb-4 gap-3">
+          <h2 className="text-lg font-semibold text-white">Setlist</h2>
+          {hasSetlistSongs ? (
+            <Link
+              to={`/gigs/${id}/charts`}
+              className="text-sm text-white bg-purple-700 hover:bg-purple-600 px-3 py-1.5 rounded-lg transition-colors"
+            >
+              Generate Charts
+            </Link>
+          ) : (
+            <button
+              type="button"
+              disabled
+              title="Assign a setlist first"
+              className="text-sm text-gray-500 border border-purple-800/40 px-3 py-1.5 rounded-lg cursor-not-allowed"
+            >
+              Generate Charts
+            </button>
+          )}
+        </div>
         {gig.playlist ? (
           <>
             <p className="text-purple-300 font-medium mb-3">{gig.playlist.name}</p>
