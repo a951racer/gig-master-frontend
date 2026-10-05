@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { Link, useNavigate } from 'react-router-dom'
+import { Link } from 'react-router-dom'
 import { listSongs, deleteSong } from '../../api/songs'
 import { listGenres } from '../../api/genres'
 import ConfirmDialog from '../../components/ConfirmDialog'
@@ -10,7 +10,6 @@ const inputCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 
 const selectCls = inputCls
 
 export default function SongListPage() {
-  const navigate = useNavigate()
   const { currentBand, hasNoBand } = useBand()
   const [songs, setSongs] = useState([])
   const [genres, setGenres] = useState([])
@@ -120,7 +119,9 @@ export default function SongListPage() {
             <tbody>
               {songs.map((song, i) => (
                 <tr key={song._id} className={`border-b border-purple-900/20 hover:bg-purple-900/10 transition-colors ${i % 2 === 0 ? '' : 'bg-[#1e1b2e]/30'}`}>
-                  <td className="px-4 py-3 font-medium text-white">{song.title}</td>
+                  <td className="px-4 py-3 font-medium">
+                    <Link to={`/songs/${song._id}`} className="text-white hover:text-purple-300 transition-colors">{song.title}</Link>
+                  </td>
                   <td className="px-4 py-3 text-gray-300">{song.artist}</td>
                   <td className="px-4 py-3">
                     {song.genre?.name
@@ -128,11 +129,8 @@ export default function SongListPage() {
                       : <span className="text-gray-600">—</span>}
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs">{song.tags?.join(', ') || '—'}</td>
-                  <td className="px-4 py-3 text-gray-400">{song.performedKey || song.originalKey || '—'}</td>
-                  <td className="px-4 py-3 text-right space-x-2">
-                    <button onClick={() => navigate(`/songs/${song._id}/chart`)} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">Chart</button>
-                    <button onClick={() => navigate(`/songs/${song._id}/chart/edit`)} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">Edit Chart</button>
-                    <button onClick={() => navigate(`/songs/${song._id}/edit`)} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">Edit</button>
+                  <td className="px-4 py-3 text-gray-400">{song.originalKey || '—'}</td>
+                  <td className="px-4 py-3 text-right">
                     <button onClick={() => setConfirmDelete(song)} className="text-xs text-red-400 hover:text-red-300 transition-colors">Delete</button>
                   </td>
                 </tr>

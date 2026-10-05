@@ -20,7 +20,7 @@ export default function SongFormPage() {
   const isEdit = Boolean(id)
   const { currentBand } = useBand()
   const [genres, setGenres] = useState([])
-  const [form, setForm] = useState({ title: '', artist: '', genre: '', tags: '', originalKey: '', performedKey: '' })
+  const [form, setForm] = useState({ title: '', artist: '', genre: '', tags: '', originalKey: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -32,7 +32,7 @@ export default function SongFormPage() {
     if (isEdit) {
       getSong(id).then(res => {
         const s = res.data
-        setForm({ title: s.title || '', artist: s.artist || '', genre: s.genre?._id || '', tags: s.tags?.join(', ') || '', originalKey: s.originalKey || '', performedKey: s.performedKey || '' })
+        setForm({ title: s.title || '', artist: s.artist || '', genre: s.genre?._id || '', tags: s.tags?.join(', ') || '', originalKey: s.originalKey || '' })
       }).catch(() => setError('Failed to load song'))
     }
   }, [id, isEdit, currentBand?.id])
@@ -44,7 +44,7 @@ export default function SongFormPage() {
     const payload = {
       title: form.title, artist: form.artist, genre: form.genre || null,
       tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
-      originalKey: form.originalKey, performedKey: form.performedKey,
+      originalKey: form.originalKey,
     }
     try {
       isEdit ? await updateSong(id, payload) : await createSong(payload)
@@ -82,19 +82,11 @@ export default function SongFormPage() {
             <label htmlFor="tags" className={labelCls}>Tags <span className="text-gray-500 font-normal">(comma-separated)</span></label>
             <input id="tags" name="tags" value={form.tags} onChange={handleChange} className={inputCls} placeholder="e.g. upbeat, crowd-pleaser" />
           </div>
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label htmlFor="originalKey" className={labelCls}>Original Key</label>
-              <select id="originalKey" name="originalKey" value={form.originalKey} onChange={handleChange} className={inputCls}>
-                {MUSICAL_KEYS.map(k => <option key={k} value={k}>{k || '—'}</option>)}
-              </select>
-            </div>
-            <div>
-              <label htmlFor="performedKey" className={labelCls}>Performed Key</label>
-              <select id="performedKey" name="performedKey" value={form.performedKey} onChange={handleChange} className={inputCls}>
-                {MUSICAL_KEYS.map(k => <option key={k} value={k}>{k || '—'}</option>)}
-              </select>
-            </div>
+          <div>
+            <label htmlFor="originalKey" className={labelCls}>Original Key</label>
+            <select id="originalKey" name="originalKey" value={form.originalKey} onChange={handleChange} className={inputCls}>
+              {MUSICAL_KEYS.map(k => <option key={k} value={k}>{k || '—'}</option>)}
+            </select>
           </div>
           {error && <p role="alert" className="text-red-400 text-sm bg-red-900/20 border border-red-800/40 rounded-lg px-3 py-2">{error}</p>}
           <div className="flex gap-3 pt-2">
