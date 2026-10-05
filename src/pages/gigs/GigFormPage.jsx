@@ -71,7 +71,7 @@ export default function GigFormPage() {
             <input id="date" type="date" value={form.date} onChange={e => setForm(p => ({ ...p, date: e.target.value }))} required className={inputCls} />
           </div>
           <div>
-            <label htmlFor="playlist" className={labelCls}>Playlist</label>
+            <label htmlFor="playlist" className={labelCls}>Setlist</label>
             <select id="playlist" value={form.playlist} onChange={e => setForm(p => ({ ...p, playlist: e.target.value }))} className={inputCls}>
               <option value="">— None —</option>
               {playlists.map(pl => <option key={pl._id} value={pl._id}>{pl.name}</option>)}

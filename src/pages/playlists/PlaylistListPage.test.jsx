@@ -49,9 +49,9 @@ describe('PlaylistListPage copy (#2)', () => {
 
     await user.click(screen.getByRole('button', { name: /copy/i }))
     const dialog = await screen.findByRole('dialog')
-    expect(within(dialog).getByLabelText(/new playlist name/i)).toHaveValue('Copy of Summer Set')
+    expect(within(dialog).getByLabelText(/new setlist name/i)).toHaveValue('Copy of Summer Set')
     // A copy's description is flagged as a duplicate, not the source's text.
-    expect(within(dialog).getByLabelText(/new playlist description/i)).toHaveValue('** Duplicate **')
+    expect(within(dialog).getByLabelText(/new setlist description/i)).toHaveValue('** Duplicate **')
   })
 
   it('copying fetches the source songs and creates a new playlist, then navigates to it', async () => {
@@ -66,7 +66,7 @@ describe('PlaylistListPage copy (#2)', () => {
     await user.click(screen.getByRole('button', { name: /copy/i }))
 
     const dialog = await screen.findByRole('dialog')
-    await user.click(within(dialog).getByRole('button', { name: /copy playlist/i }))
+    await user.click(within(dialog).getByRole('button', { name: /copy setlist/i }))
 
     await waitFor(() => expect(getPlaylist).toHaveBeenCalledWith('p1'))
     await waitFor(() => {
@@ -92,10 +92,10 @@ describe('PlaylistListPage copy (#2)', () => {
     await user.click(screen.getByRole('button', { name: /copy/i }))
 
     const dialog = await screen.findByRole('dialog')
-    const nameField = within(dialog).getByLabelText(/new playlist name/i)
+    const nameField = within(dialog).getByLabelText(/new setlist name/i)
     await user.clear(nameField)
     await user.type(nameField, 'Winter Set')
-    await user.click(within(dialog).getByRole('button', { name: /copy playlist/i }))
+    await user.click(within(dialog).getByRole('button', { name: /copy setlist/i }))
 
     await waitFor(() => {
       expect(createPlaylist).toHaveBeenCalledWith(expect.objectContaining({ name: 'Winter Set', songs: [{ song: 's1', playedKey: '' }] }))
@@ -109,8 +109,8 @@ describe('PlaylistListPage copy (#2)', () => {
     await user.click(screen.getByRole('button', { name: /copy/i }))
 
     const dialog = await screen.findByRole('dialog')
-    await user.clear(within(dialog).getByLabelText(/new playlist name/i))
-    await user.click(within(dialog).getByRole('button', { name: /copy playlist/i }))
+    await user.clear(within(dialog).getByLabelText(/new setlist name/i))
+    await user.click(within(dialog).getByRole('button', { name: /copy setlist/i }))
 
     expect(await within(dialog).findByText(/name is required/i)).toBeInTheDocument()
     expect(createPlaylist).not.toHaveBeenCalled()
@@ -126,7 +126,7 @@ describe('PlaylistListPage copy (#2)', () => {
     await user.click(screen.getByRole('button', { name: /copy/i }))
 
     const dialog = await screen.findByRole('dialog')
-    await user.click(within(dialog).getByRole('button', { name: /copy playlist/i }))
+    await user.click(within(dialog).getByRole('button', { name: /copy setlist/i }))
 
     expect(await within(dialog).findByText(/must be unique within your band/i)).toBeInTheDocument()
     // The modal stays open so the user can rename.

@@ -127,7 +127,7 @@ export default function PlaylistDetailPage() {
     setLoading(true)
     getPlaylist(id)
       .then(res => { setPlaylist(res.data); setEntries(normalizeEntries(res.data.songs)) })
-      .catch(() => setError('Failed to load playlist'))
+      .catch(() => setError('Failed to load setlist'))
       .finally(() => setLoading(false))
   }, [id, currentBand?.id])
 
@@ -187,14 +187,14 @@ export default function PlaylistDetailPage() {
   }
 
   if (loading) return <div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>
-  if (!playlist) return <div className="text-center py-16 text-gray-500">Playlist not found</div>
+  if (!playlist) return <div className="text-center py-16 text-gray-500">Setlist not found</div>
 
   const playlistSongIds = entries.map(e => e.song._id)
 
   return (
     <div className="max-w-6xl mx-auto px-6 py-8">
       <div className="flex items-center gap-4 mb-6">
-        <button onClick={() => navigate('/playlists')} className="text-gray-400 hover:text-white transition-colors text-sm">← Playlists</button>
+        <button onClick={() => navigate('/playlists')} className="text-gray-400 hover:text-white transition-colors text-sm">← Setlists</button>
         <div className="flex-1">
           <h1 className="text-2xl font-bold text-white">{playlist.name}</h1>
           {playlist.description && <p className="text-gray-400 text-sm mt-0.5">{playlist.description}</p>}

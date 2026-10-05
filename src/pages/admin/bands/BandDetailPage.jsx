@@ -278,7 +278,7 @@ function DangerZone({ band, onChanged, onDeleted }) {
     <Section title="Archive / Delete">
       <p className="text-gray-400 text-xs mb-3">
         A band must be archived before it can be permanently deleted. Deleting removes
-        the band&apos;s songs, playlists, gigs, genres, and memberships.
+        the band&apos;s songs, setlists, gigs, genres, and memberships.
       </p>
       {error && <p role="alert" className="text-red-400 text-sm mb-3">{error}</p>}
       <div className="flex items-center gap-3">
@@ -300,7 +300,7 @@ function DangerZone({ band, onChanged, onDeleted }) {
 
       {confirmDelete && (
         <ConfirmDialog
-          message={`Permanently delete ${band.name}? This removes all of its songs, playlists, gigs, genres, and memberships. This cannot be undone.`}
+          message={`Permanently delete ${band.name}? This removes all of its songs, setlists, gigs, genres, and memberships. This cannot be undone.`}
           onConfirm={doDelete}
           onCancel={() => setConfirmDelete(false)}
         />

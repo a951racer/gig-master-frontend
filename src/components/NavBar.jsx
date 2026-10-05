@@ -9,7 +9,7 @@ import { setCurrentBandId } from '../api/axiosInstance'
 // to load their data, which the pages themselves handle.
 const memberLinks = [
   { to: '/songs', label: 'Songs' },
-  { to: '/playlists', label: 'Playlists' },
+  { to: '/playlists', label: 'Setlists' },
   { to: '/gigs', label: 'Gigs' },
 ]
 
