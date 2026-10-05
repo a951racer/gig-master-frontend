@@ -130,7 +130,8 @@ export default function SongListPage() {
                   </td>
                   <td className="px-4 py-3 text-gray-400 text-xs">{song.tags?.join(', ') || '—'}</td>
                   <td className="px-4 py-3 text-gray-400">{song.originalKey || '—'}</td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-4 py-3 text-right space-x-3">
+                    <Link to={`/songs/${song._id}/chart`} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">Chart</Link>
                     <button onClick={() => setConfirmDelete(song)} className="text-xs text-red-400 hover:text-red-300 transition-colors">Delete</button>
                   </td>
                 </tr>
