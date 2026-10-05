@@ -70,10 +70,14 @@ export default function GigDetailPage() {
                   // Each entry is { song: <populated song>, playedKey } (#72).
                   // Tolerate a legacy bare-song shape defensively.
                   const song = entry?.song ?? entry
+                  const playedKey = entry?.playedKey
                   return (
                     <li key={song?._id ?? i} className="flex items-center gap-3 text-sm">
                       <span className="text-gray-600 w-5 text-right shrink-0">{i + 1}</span>
                       <span className="text-white font-medium">{song?.title ?? '—'}</span>
+                      {playedKey && (
+                        <span className="text-purple-300 font-mono text-xs font-normal">[{playedKey}]</span>
+                      )}
                       {song?.artist && <span className="text-gray-400">— {song.artist}</span>}
                     </li>
                   )
