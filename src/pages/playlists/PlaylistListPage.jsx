@@ -96,7 +96,6 @@ export default function PlaylistListPage() {
                 {p.songCount ?? p.songs?.length ?? 0} songs
               </span>
               <div className="flex gap-2">
-                <button onClick={() => navigate(`/playlists/new?edit=${p._id}`)} className="text-xs text-purple-400 hover:text-purple-300 transition-colors px-2 py-1">Edit</button>
                 <button onClick={() => setCopySource(p)} className="text-xs text-gray-300 hover:text-white transition-colors px-2 py-1">Copy</button>
                 <button onClick={() => setConfirmDelete(p)} className="text-xs text-red-400 hover:text-red-300 transition-colors px-2 py-1">Delete</button>
               </div>
