@@ -31,6 +31,7 @@ describe('GigDetailPage — setlist songs', () => {
           songs: [
             { song: { _id: 's1', title: 'Bye Bye Love', artist: 'Everly Brothers' }, playedKey: 'A' },
             { song: { _id: 's2', title: 'Sweet Caroline', artist: 'Neil Diamond' }, playedKey: 'G' },
+            { song: { _id: 's3', title: 'Keyless Tune', artist: 'Nobody' }, playedKey: '' },
           ],
         },
       },
@@ -43,6 +44,13 @@ describe('GigDetailPage — setlist songs', () => {
     expect(screen.getByText('— Everly Brothers')).toBeInTheDocument()
     // No blank-title placeholders when songs are populated.
     expect(screen.queryByText('—', { exact: true })).not.toBeInTheDocument()
+
+    // Played keys show in brackets next to songs that have one...
+    expect(screen.getByText('[A]')).toBeInTheDocument()
+    expect(screen.getByText('[G]')).toBeInTheDocument()
+    // ...and keyless songs show no bracket badge.
+    expect(screen.getByText('Keyless Tune')).toBeInTheDocument()
+    expect(screen.queryByText('[]')).not.toBeInTheDocument()
   })
 
   it('shows "No setlist assigned" when the gig has no playlist', async () => {
