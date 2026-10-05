@@ -121,6 +121,14 @@ export default function ChartViewerPage() {
             ))}
           </select>
         </label>
+        {/* Edit this chart — jumps to the chart editor. */}
+        <button
+          type="button"
+          onClick={() => navigate(`/songs/${songId}/chart/edit`)}
+          className="text-sm text-white border border-purple-800/40 hover:bg-purple-800/30 px-3 py-2 rounded-lg transition-colors"
+        >
+          Edit Chart
+        </button>
         {/* Download PDF (R13): enabled only when a chart exists. Fetches the PDF
             as a Blob through the authenticated axios instance and triggers a
             browser download. Disabled while a request is in flight. */}
