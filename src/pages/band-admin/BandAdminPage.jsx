@@ -35,26 +35,33 @@ export default function BandAdminPage() {
     }`
 
   return (
-    <div className="max-w-xl mx-auto px-6 py-8">
-      <h1 className="text-2xl font-bold text-white mb-2">Band Administration</h1>
-      <p className="text-gray-400 text-sm mb-6">
-        Managing <span className="text-purple-300">{currentBand.name}</span>
-      </p>
-      <nav className="flex gap-2 mb-6">
-        <NavLink to="/band-admin/join-requests" className={linkCls}>
-          Join Requests
-        </NavLink>
-        <NavLink to="/band-admin/genres" className={linkCls}>
-          Genres
-        </NavLink>
-        <NavLink to="/band-admin/invites" className={linkCls}>
-          Invites
-        </NavLink>
-      </nav>
+    // Fill the app content region as a flex column that does not scroll itself.
+    // The page title, "Managing …", sub-nav, and band settings form a shrink-0
+    // header that stays put; the active sub-page (Outlet) scrolls internally.
+    <div className="max-w-xl mx-auto px-6 h-full flex flex-col overflow-hidden">
+      <div className="shrink-0 pt-8">
+        <h1 className="text-2xl font-bold text-white mb-2">Band Administration</h1>
+        <p className="text-gray-400 text-sm mb-6">
+          Managing <span className="text-purple-300">{currentBand.name}</span>
+        </p>
+        <nav className="flex gap-2 mb-6">
+          <NavLink to="/band-admin/join-requests" className={linkCls}>
+            Join Requests
+          </NavLink>
+          <NavLink to="/band-admin/genres" className={linkCls}>
+            Genres
+          </NavLink>
+          <NavLink to="/band-admin/invites" className={linkCls}>
+            Invites
+          </NavLink>
+        </nav>
 
-      <BandSettings currentBand={currentBand} />
+        <BandSettings currentBand={currentBand} />
+      </div>
 
-      <Outlet />
+      <div className="flex-1 min-h-0 overflow-y-auto pb-8">
+        <Outlet />
+      </div>
     </div>
   )
 }
