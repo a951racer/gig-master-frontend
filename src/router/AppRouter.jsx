@@ -71,9 +71,16 @@ export default function AppRouter() {
     >
       <AuthProvider>
         <BandProvider>
+          {/* App shell: a fixed-viewport flex column that never scrolls at the
+              window level. The NavBar is a non-shrinking row; the content
+              region below fills the rest and scrolls INTERNALLY. Most pages
+              simply scroll within this region (visually identical to the old
+              window scroll); a page can instead fill it exactly and manage its
+              own inner scroll (e.g. SongListPage's scrolling table). */}
+          <div className="h-screen flex flex-col overflow-hidden">
           <NavBar />
           <div
-            className="min-h-screen bg-[#16132a] text-gray-100 bg-cover bg-center bg-no-repeat bg-fixed relative"
+            className="flex-1 min-h-0 overflow-y-auto bg-[#16132a] text-gray-100 bg-cover bg-center bg-no-repeat bg-fixed relative"
             style={{ backgroundImage: "linear-gradient(rgba(22, 19, 42, 0.7), rgba(22, 19, 42, 0.7)), url('/images/app-bg.png')" }}
           >
             <Suspense fallback={<div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>}>
@@ -131,6 +138,7 @@ export default function AppRouter() {
               <Route path="*" element={<RootRedirect />} />
             </Routes>
             </Suspense>
+          </div>
           </div>
         </BandProvider>
       </AuthProvider>
