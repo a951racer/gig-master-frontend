@@ -114,16 +114,19 @@ export default function SongListPage() {
           <p>No songs found. Add your first song!</p>
         </div>
       ) : (
-        <div className="bg-[#2a2640] border border-purple-800/30 rounded-xl overflow-hidden">
+        <div className="bg-[#2a2640] border border-purple-800/30 rounded-xl overflow-y-auto max-h-[calc(100vh-20rem)]">
           <table className="w-full text-sm">
+            {/* Column titles stay pinned within this scroll container. Each th
+                is sticky (more reliable than a sticky thead/tr) with an opaque
+                panel-colored background so rows scroll cleanly behind it. */}
             <thead>
-              <tr className="border-b border-purple-800/30 text-gray-400 text-xs uppercase tracking-wider">
-                <th className="text-left px-4 py-3">Title</th>
-                <th className="text-left px-4 py-3">Artist</th>
-                <th className="text-left px-4 py-3">Genre</th>
-                <th className="text-left px-4 py-3">Tags</th>
-                <th className="text-left px-4 py-3">Key</th>
-                <th className="text-right px-4 py-3">Actions</th>
+              <tr className="text-gray-400 text-xs uppercase tracking-wider">
+                <th className="sticky top-0 z-10 bg-[#2a2640] border-b border-purple-800/30 text-left px-4 py-3">Title</th>
+                <th className="sticky top-0 z-10 bg-[#2a2640] border-b border-purple-800/30 text-left px-4 py-3">Artist</th>
+                <th className="sticky top-0 z-10 bg-[#2a2640] border-b border-purple-800/30 text-left px-4 py-3">Genre</th>
+                <th className="sticky top-0 z-10 bg-[#2a2640] border-b border-purple-800/30 text-left px-4 py-3">Tags</th>
+                <th className="sticky top-0 z-10 bg-[#2a2640] border-b border-purple-800/30 text-left px-4 py-3">Key</th>
+                <th className="sticky top-0 z-10 bg-[#2a2640] border-b border-purple-800/30 text-right px-4 py-3">Actions</th>
               </tr>
             </thead>
             <tbody>
