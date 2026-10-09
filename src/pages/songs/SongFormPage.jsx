@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { createSong, getSong, updateSong } from '../../api/songs'
 import { listGenres } from '../../api/genres'
 import { useBand } from '../../auth/BandContext'
+import TagInput from '../../components/TagInput'
 
 const MUSICAL_KEYS = [
   '', 'C', 'C#', 'Db', 'D', 'D#', 'Eb', 'E', 'F',
@@ -20,7 +21,7 @@ export default function SongFormPage() {
   const isEdit = Boolean(id)
   const { currentBand } = useBand()
   const [genres, setGenres] = useState([])
-  const [form, setForm] = useState({ title: '', artist: '', genre: '', tags: '', originalKey: '' })
+  const [form, setForm] = useState({ title: '', artist: '', genre: '', tags: [], originalKey: '' })
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
 
@@ -32,7 +33,7 @@ export default function SongFormPage() {
     if (isEdit) {
       getSong(id).then(res => {
         const s = res.data
-        setForm({ title: s.title || '', artist: s.artist || '', genre: s.genre?._id || '', tags: s.tags?.join(', ') || '', originalKey: s.originalKey || '' })
+        setForm({ title: s.title || '', artist: s.artist || '', genre: s.genre?._id || '', tags: s.tags || [], originalKey: s.originalKey || '' })
       }).catch(() => setError('Failed to load song'))
     }
   }, [id, isEdit, currentBand?.id])
@@ -43,7 +44,7 @@ export default function SongFormPage() {
     e.preventDefault(); setError(''); setLoading(true)
     const payload = {
       title: form.title, artist: form.artist, genre: form.genre || null,
-      tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      tags: form.tags,
       originalKey: form.originalKey,
     }
     try {
@@ -79,8 +80,8 @@ export default function SongFormPage() {
             </select>
           </div>
           <div>
-            <label htmlFor="tags" className={labelCls}>Tags <span className="text-gray-500 font-normal">(comma-separated)</span></label>
-            <input id="tags" name="tags" value={form.tags} onChange={handleChange} className={inputCls} placeholder="e.g. upbeat, crowd-pleaser" />
+            <label htmlFor="tags" className={labelCls}>Tags</label>
+            <TagInput id="tags" value={form.tags} onChange={(tags) => setForm(prev => ({ ...prev, tags }))} placeholder="e.g. upbeat, crowd-pleaser" />
           </div>
           <div>
             <label htmlFor="originalKey" className={labelCls}>Original Key</label>

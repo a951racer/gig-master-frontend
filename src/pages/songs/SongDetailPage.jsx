@@ -3,6 +3,8 @@ import { useNavigate, useParams } from 'react-router-dom'
 import { getSong, updateSong } from '../../api/songs'
 import { listGenres } from '../../api/genres'
 import { useBand } from '../../auth/BandContext'
+import TagInput from '../../components/TagInput'
+import TagChips from '../../components/TagChips'
 
 // Song Detail page (/songs/:id). Read-only by default; a pencil toggles inline
 // edit mode (same fields + save as the create form). Also offers chart
@@ -38,7 +40,7 @@ export default function SongDetailPage() {
   const [song, setSong] = useState(null)
   const [genres, setGenres] = useState([])
   const [editing, setEditing] = useState(false)
-  const [form, setForm] = useState({ title: '', artist: '', genre: '', tags: '', originalKey: '' })
+  const [form, setForm] = useState({ title: '', artist: '', genre: '', tags: [], originalKey: '' })
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
   const [error, setError] = useState('')
@@ -61,7 +63,7 @@ export default function SongDetailPage() {
     title: s.title || '',
     artist: s.artist || '',
     genre: s.genre?._id || '',
-    tags: s.tags?.join(', ') || '',
+    tags: s.tags || [],
     originalKey: s.originalKey || '',
   })
 
@@ -77,7 +79,7 @@ export default function SongDetailPage() {
       title: form.title,
       artist: form.artist,
       genre: form.genre || null,
-      tags: form.tags ? form.tags.split(',').map(t => t.trim()).filter(Boolean) : [],
+      tags: form.tags,
       originalKey: form.originalKey,
     }
     try {
@@ -152,8 +154,8 @@ export default function SongDetailPage() {
               </select>
             </div>
             <div>
-              <label htmlFor="tags" className={labelCls}>Tags <span className="text-gray-500 font-normal">(comma-separated)</span></label>
-              <input id="tags" name="tags" value={form.tags} onChange={handleChange} className={inputCls} placeholder="e.g. upbeat, crowd-pleaser" />
+              <label htmlFor="tags" className={labelCls}>Tags</label>
+              <TagInput id="tags" value={form.tags} onChange={(tags) => setForm(prev => ({ ...prev, tags }))} placeholder="e.g. upbeat, crowd-pleaser" />
             </div>
             <div>
               <label htmlFor="originalKey" className={labelCls}>Original Key</label>
@@ -180,7 +182,7 @@ export default function SongDetailPage() {
                 : <span className="text-gray-600">—</span>}
             </ReadField>
             <ReadField label="Tags">
-              {song.tags?.length ? song.tags.join(', ') : <span className="text-gray-600">—</span>}
+              <TagChips tags={song.tags} />
             </ReadField>
             <ReadField label="Original Key">{song.originalKey || <span className="text-gray-600">—</span>}</ReadField>
           </div>

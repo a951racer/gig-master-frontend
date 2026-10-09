@@ -5,6 +5,7 @@ import { listGenres } from '../../api/genres'
 import ConfirmDialog from '../../components/ConfirmDialog'
 import { useBand } from '../../auth/BandContext'
 import NoBandPrompt from '../bands/NoBandPrompt'
+import TagChips from '../../components/TagChips'
 
 const inputCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
 const selectCls = inputCls
@@ -139,7 +140,7 @@ export default function SongListPage() {
                       ? <span className="bg-purple-900/40 text-purple-300 text-xs px-2 py-0.5 rounded-full">{song.genre.name}</span>
                       : <span className="text-gray-600">—</span>}
                   </td>
-                  <td className="px-4 py-3 text-gray-400 text-xs">{song.tags?.join(', ') || '—'}</td>
+                  <td className="px-4 py-3"><TagChips tags={song.tags} /></td>
                   <td className="px-4 py-3 text-gray-400">{song.originalKey || '—'}</td>
                   <td className="px-4 py-3 text-right space-x-3">
                     <Link to={`/songs/${song._id}/chart`} className="text-xs text-purple-400 hover:text-purple-300 transition-colors">Chart</Link>
