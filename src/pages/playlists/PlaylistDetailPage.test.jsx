@@ -57,6 +57,14 @@ describe('PlaylistDetailPage — Played Key (#84)', () => {
     expect(screen.getByText('2 songs')).toBeInTheDocument()
   })
 
+  it('links each song title to its song detail page (#98)', async () => {
+    renderPage()
+    const alpha = await screen.findByRole('link', { name: 'Alpha' })
+    expect(alpha).toHaveAttribute('href', '/songs/s1')
+    const beta = screen.getByRole('link', { name: 'Beta' })
+    expect(beta).toHaveAttribute('href', '/songs/s2')
+  })
+
   it('shows each song\'s current played key in its selector', async () => {
     renderPage()
     const sel1 = await screen.findByLabelText('Played key for Alpha')
