@@ -48,7 +48,8 @@ describe('SongDetailPage (#83)', () => {
     expect(await screen.findByRole('heading', { name: 'Country Roads' })).toBeInTheDocument()
     expect(screen.getByText('John Denver')).toBeInTheDocument()
     expect(screen.getByText('Folk')).toBeInTheDocument()
-    expect(screen.getByText('classic, singalong')).toBeInTheDocument()
+    expect(screen.getByText('classic')).toBeInTheDocument()
+    expect(screen.getByText('singalong')).toBeInTheDocument()
     expect(screen.getByText('A')).toBeInTheDocument()
     // Read-only: no title textbox until editing.
     expect(screen.queryByRole('textbox')).not.toBeInTheDocument()
@@ -83,6 +84,7 @@ describe('SongDetailPage (#83)', () => {
       title: 'Take Me Home',
       artist: 'John Denver',
       originalKey: 'A',
+      tags: ['classic', 'singalong'],
     })))
     // No performedKey in the payload.
     const payload = updateSong.mock.calls[0][1]
