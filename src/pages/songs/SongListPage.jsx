@@ -65,12 +65,16 @@ export default function SongListPage() {
   }
 
   return (
-    <div className="max-w-6xl mx-auto px-6 py-8">
-      {/* Pinned header + filters: stay in view while the song list scrolls
-          underneath. `top-14` clears the sticky NavBar; the app-background
-          color + bottom padding keep scrolling rows hidden behind it. z below
-          the NavBar's z-50. */}
-      <div className="sticky top-14 z-30 bg-[#16132a] pt-2 pb-4">
+    // No TOP padding on the content wrapper: the pinned header must start flush
+    // against the NavBar so it does not travel before sticking. Bottom padding
+    // is kept via pb-8.
+    <div className="max-w-6xl mx-auto px-6 pb-8">
+      {/* Pinned header + filters: stay FIXED in view (no movement) while the
+          song list scrolls underneath. top-[57px] = NavBar height so the block
+          rests exactly below it from the start; the pt-8 inside restores the
+          page's top spacing. App-background color + bottom padding keep
+          scrolling rows hidden behind it. z below the NavBar's z-50. */}
+      <div className="sticky top-[57px] z-30 bg-[#16132a] pt-8 pb-4">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">Songs</h1>
         <Link to="/songs/new">
