@@ -58,7 +58,7 @@ export default function NavBar() {
     }`
 
   return (
-    <nav className="sticky top-0 z-50 bg-[#1e1b2e] border-b border-purple-900/40 px-6 py-3 flex items-center gap-6">
+    <nav className="shrink-0 z-50 bg-[#1e1b2e] border-b border-purple-900/40 px-6 py-3 flex items-center gap-6">
       <span className="text-purple-400 font-bold text-lg tracking-wide mr-4">🎸 GigMaster</span>
 
       <div className="flex items-center gap-1 flex-1">

@@ -63,8 +63,11 @@ export default function PlaylistListPage() {
   }
 
   return (
-    <div className="max-w-4xl mx-auto px-6 py-8">
-      <div className="flex items-center justify-between mb-6">
+    // Fill the app content region as a flex column that does not scroll itself;
+    // the header (title + New button) is a shrink-0 block and the list below
+    // scrolls internally.
+    <div className="max-w-4xl mx-auto px-6 h-full flex flex-col overflow-hidden">
+      <div className="shrink-0 flex items-center justify-between pt-8 pb-6">
         <h1 className="text-2xl font-bold text-white">Setlists</h1>
         <Link to="/playlists/new">
           <button className="bg-purple-700 hover:bg-purple-600 text-white text-sm font-medium px-4 py-2 rounded-lg transition-colors">
@@ -73,6 +76,7 @@ export default function PlaylistListPage() {
         </Link>
       </div>
 
+      <div className="flex-1 min-h-0 overflow-y-auto pb-8">
       {error && <p role="alert" className="text-red-400 text-sm mb-4">{error}</p>}
 
       {loading ? (
@@ -103,6 +107,7 @@ export default function PlaylistListPage() {
           ))}
         </div>
       )}
+      </div>
 
       {confirmDelete && (
         <ConfirmDialog

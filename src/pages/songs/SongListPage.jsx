@@ -65,11 +65,12 @@ export default function SongListPage() {
   }
 
   return (
-    // Fixed-height flex column that fills the viewport below the (57px) NavBar.
-    // overflow-hidden means the PAGE never scrolls; only the table panel below
-    // does. So the header + filters simply stay put (no sticky needed), and the
-    // table's own scroll region keeps its column headers pinned.
-    <div className="max-w-6xl mx-auto px-6 h-[calc(100vh-57px)] flex flex-col overflow-hidden">
+    // Fill the app content region (h-full) as a flex column that does not
+    // scroll itself (overflow-hidden) — so the header + filters stay put and
+    // only the table panel below scrolls, keeping its column headers pinned.
+    // h-full avoids any magic NavBar-height offset: the content region already
+    // starts below the nav.
+    <div className="max-w-6xl mx-auto px-6 h-full flex flex-col overflow-hidden">
       {/* Header + filters: a non-shrinking block at the top of the column. */}
       <div className="shrink-0 pt-8 pb-4">
       <div className="flex items-center justify-between mb-6">
