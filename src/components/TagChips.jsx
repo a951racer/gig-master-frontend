@@ -10,7 +10,7 @@ export default function TagChips({ tags, emptyText = '—', className = '' }) {
       {list.map((tag) => (
         <span
           key={tag}
-          className="bg-[#1e1b2e] border border-purple-800/40 text-gray-300 text-xs px-2 py-0.5 rounded-full"
+          className="bg-purple-900/40 border border-purple-500/40 text-gray-200 text-xs px-2 py-0.5 rounded-full"
         >
           {tag}
         </span>

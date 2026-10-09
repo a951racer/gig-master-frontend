@@ -34,7 +34,7 @@ export default function TagInput({ value = [], onChange, id = 'tags', placeholde
         {tags.map((tag, i) => (
           <span
             key={`${tag}-${i}`}
-            className="inline-flex items-center gap-1 bg-[#1e1b2e] border border-purple-800/40 text-gray-300 text-xs px-2 py-0.5 rounded-full"
+            className="inline-flex items-center gap-1 bg-purple-900/40 border border-purple-500/40 text-gray-200 text-xs px-2 py-0.5 rounded-full"
           >
             {tag}
             <button
