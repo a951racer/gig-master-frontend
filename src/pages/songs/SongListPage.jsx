@@ -65,16 +65,13 @@ export default function SongListPage() {
   }
 
   return (
-    // No TOP padding on the content wrapper: the pinned header must start flush
-    // against the NavBar so it does not travel before sticking. Bottom padding
-    // is kept via pb-8.
-    <div className="max-w-6xl mx-auto px-6 pb-8">
-      {/* Pinned header + filters: stay FIXED in view (no movement) while the
-          song list scrolls underneath. top-[57px] = NavBar height so the block
-          rests exactly below it from the start; the pt-8 inside restores the
-          page's top spacing. App-background color + bottom padding keep
-          scrolling rows hidden behind it. z below the NavBar's z-50. */}
-      <div className="sticky top-[57px] z-30 bg-[#16132a] pt-8 pb-4">
+    // Fixed-height flex column that fills the viewport below the (57px) NavBar.
+    // overflow-hidden means the PAGE never scrolls; only the table panel below
+    // does. So the header + filters simply stay put (no sticky needed), and the
+    // table's own scroll region keeps its column headers pinned.
+    <div className="max-w-6xl mx-auto px-6 h-[calc(100vh-57px)] flex flex-col overflow-hidden">
+      {/* Header + filters: a non-shrinking block at the top of the column. */}
+      <div className="shrink-0 pt-8 pb-4">
       <div className="flex items-center justify-between mb-6">
         <h1 className="text-2xl font-bold text-white">Songs</h1>
         <Link to="/songs/new">
@@ -114,7 +111,7 @@ export default function SongListPage() {
           <p>No songs found. Add your first song!</p>
         </div>
       ) : (
-        <div className="bg-[#2a2640] border border-purple-800/30 rounded-xl overflow-y-auto max-h-[calc(100vh-20rem)]">
+        <div className="flex-1 min-h-0 overflow-y-auto bg-[#2a2640] border border-purple-800/30 rounded-xl mb-8">
           <table className="w-full text-sm">
             {/* Column titles stay pinned within this scroll container. Each th
                 is sticky (more reliable than a sticky thead/tr) with an opaque
