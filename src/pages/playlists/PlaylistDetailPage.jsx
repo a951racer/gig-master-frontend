@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable,
 } from '@dnd-kit/core'
@@ -64,7 +64,13 @@ function SortableSongItem({ entry, index, onRemove, onKeyChange }) {
         {...attributes} {...listeners}
       >{index + 1}</span>
       <div className="flex-1 min-w-0">
-        <p className="text-white text-sm font-medium truncate">{song.title}</p>
+        <Link
+          to={`/songs/${song._id}`}
+          onPointerDown={(e) => e.stopPropagation()}
+          className="block text-white text-sm font-medium truncate hover:text-purple-300 transition-colors"
+        >
+          {song.title}
+        </Link>
         <p className="text-gray-400 text-xs truncate">{song.artist}</p>
       </div>
 
