@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { render, screen, waitFor, within } from '@testing-library/react'
+import { render, screen, waitFor, within, fireEvent } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { MemoryRouter } from 'react-router-dom'
 
@@ -114,6 +114,21 @@ describe('GigChartsPage — setup step (#85)', () => {
       })
     )
   })
+
+  it('navigation keys do nothing in the setup step (hook disabled)', async () => {
+    renderPage()
+    // Wait for the setup step to render (before generating any charts).
+    await screen.findByText('Bye Bye Love')
+    expect(screen.getByRole('button', { name: /^generate charts$/i })).toBeInTheDocument()
+
+    // A "next" key should be inert while gating keeps the hook disabled.
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+
+    // Still on the setup step: the Generate button remains and no performance
+    // "Page X of N" indicator appears.
+    expect(screen.getByRole('button', { name: /^generate charts$/i })).toBeInTheDocument()
+    expect(screen.queryByText(/Page \d+ of \d+/)).not.toBeInTheDocument()
+  })
 })
 
 describe('GigChartsPage — performance view (#85)', () => {
@@ -157,6 +172,47 @@ describe('GigChartsPage — performance view (#85)', () => {
     await user.click(screen.getByRole('button', { name: /next page/i }))
     await screen.findByText('Page 2 of 2')
     await user.click(screen.getByRole('button', { name: /jump to beginning/i }))
+    expect(await screen.findByText('Page 1 of 2')).toBeInTheDocument()
+  })
+
+  it('keyboard keys drive navigation in the performance view (hook enabled)', async () => {
+    const user = userEvent.setup()
+    // Same 2-page pattern: s1 real chart + s2 placeholder → "Page 1 of 2".
+    allCharts.mockResolvedValue({
+      data: {
+        playlistId: 'pl1',
+        truncated: false,
+        charts: [
+          { songId: 's1', title: 'Bye Bye Love', playedKey: 'A', chart: oneP('Bye Bye Love') },
+          { songId: 's2', title: 'Sweet Caroline', playedKey: 'G', chart: null },
+        ],
+      },
+    })
+
+    renderPage()
+    await screen.findByText('Bye Bye Love')
+    await user.click(screen.getByRole('button', { name: /^generate charts$/i }))
+
+    expect(await screen.findByText('Page 1 of 2')).toBeInTheDocument()
+
+    // ArrowRight advances to the next page.
+    fireEvent.keyDown(window, { key: 'ArrowRight' })
+    expect(await screen.findByText('Page 2 of 2')).toBeInTheDocument()
+
+    // Already at the last page: Space / PageDown are "next" but do not wrap.
+    fireEvent.keyDown(window, { key: ' ' })
+    expect(await screen.findByText('Page 2 of 2')).toBeInTheDocument()
+
+    // ArrowLeft reverses to the previous page.
+    fireEvent.keyDown(window, { key: 'ArrowLeft' })
+    expect(await screen.findByText('Page 1 of 2')).toBeInTheDocument()
+
+    // PageDown advances again (maps to "next").
+    fireEvent.keyDown(window, { key: 'PageDown' })
+    expect(await screen.findByText('Page 2 of 2')).toBeInTheDocument()
+
+    // Home jumps back to the first page.
+    fireEvent.keyDown(window, { key: 'Home' })
     expect(await screen.findByText('Page 1 of 2')).toBeInTheDocument()
   })
 
