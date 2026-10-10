@@ -4,6 +4,7 @@ import { getGig } from '../../api/gigs'
 import { allCharts, allChartsPdf, allChartsPdfZip } from '../../api/charts'
 import { useBand } from '../../auth/BandContext'
 import ChartPages, { PAGE_WIDTH, PAGE_HEIGHT } from '../charts/ChartPages'
+import { useChartNavigation } from '../../hooks/useChartNavigation'
 
 // Gig "generate all charts" page (#85).
 //
@@ -141,7 +142,6 @@ export default function GigChartsPage() {
   const [generateError, setGenerateError] = useState('')
   const [flatPages, setFlatPages] = useState(null)
   const [truncated, setTruncated] = useState(false)
-  const [pageIndex, setPageIndex] = useState(0)
 
   // Download state.
   const [downloading, setDownloading] = useState('') // '' | 'pdf' | 'zip'
@@ -218,7 +218,7 @@ export default function GigChartsPage() {
       const flat = buildFlatPages(res.data?.charts)
       setFlatPages(flat)
       setTruncated(Boolean(res.data?.truncated))
-      setPageIndex(0)
+      nav.goStart()
     } catch (err) {
       setGenerateError(err?.response?.data?.error?.message || 'Failed to generate charts')
     } finally {
@@ -256,22 +256,12 @@ export default function GigChartsPage() {
 
   const inPerformance = Array.isArray(flatPages)
   const total = flatPages?.length || 0
-  const current = inPerformance ? flatPages[pageIndex] : null
 
-  const goStart = useCallback(() => setPageIndex(0), [])
-  const goPrev = useCallback(() => setPageIndex((i) => Math.max(0, i - 1)), [])
-  const goNext = useCallback(() => setPageIndex((i) => Math.min(total - 1, i + 1)), [total])
+  // Navigation (index state, clamped actions, and key bindings) lives in the
+  // shared hook. Keys are only captured while in the performance view.
+  const nav = useChartNavigation({ total, enabled: inPerformance })
 
-  // Keyboard arrows (nice-to-have) in the performance view.
-  useEffect(() => {
-    if (!inPerformance) return
-    const onKey = (e) => {
-      if (e.key === 'ArrowLeft') goPrev()
-      else if (e.key === 'ArrowRight') goNext()
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [inPerformance, goPrev, goNext])
+  const current = inPerformance ? flatPages[nav.index] : null
 
   if (loading) {
     return <div className="flex items-center justify-center h-64 text-gray-400">Loading...</div>
@@ -372,11 +362,11 @@ export default function GigChartsPage() {
         <div className="flex items-center justify-center gap-3 mt-4">
           <button
             type="button"
-            onClick={goStart}
-            disabled={pageIndex === 0}
+            onClick={nav.goStart}
+            disabled={nav.index === 0}
             aria-label="Jump to beginning"
             className={
-              pageIndex === 0
+              nav.index === 0
                 ? 'text-sm text-gray-600 border border-purple-800/40 px-3 py-2 rounded-lg cursor-not-allowed'
                 : 'text-sm text-white border border-purple-800/40 hover:bg-purple-800/30 px-3 py-2 rounded-lg transition-colors'
             }
@@ -385,11 +375,11 @@ export default function GigChartsPage() {
           </button>
           <button
             type="button"
-            onClick={goPrev}
-            disabled={pageIndex === 0}
+            onClick={nav.goPrev}
+            disabled={nav.index === 0}
             aria-label="Previous page"
             className={
-              pageIndex === 0
+              nav.index === 0
                 ? 'text-sm text-gray-600 border border-purple-800/40 px-3 py-2 rounded-lg cursor-not-allowed'
                 : 'text-sm text-white border border-purple-800/40 hover:bg-purple-800/30 px-3 py-2 rounded-lg transition-colors'
             }
@@ -397,15 +387,15 @@ export default function GigChartsPage() {
             ← Prev
           </button>
           <span className="text-sm text-gray-300 min-w-[7rem] text-center">
-            Page {total === 0 ? 0 : pageIndex + 1} of {total}
+            Page {total === 0 ? 0 : nav.index + 1} of {total}
           </span>
           <button
             type="button"
-            onClick={goNext}
-            disabled={pageIndex >= total - 1}
+            onClick={nav.goNext}
+            disabled={nav.index >= total - 1}
             aria-label="Next page"
             className={
-              pageIndex >= total - 1
+              nav.index >= total - 1
                 ? 'text-sm text-gray-600 border border-purple-800/40 px-3 py-2 rounded-lg cursor-not-allowed'
                 : 'text-sm text-white border border-purple-800/40 hover:bg-purple-800/30 px-3 py-2 rounded-lg transition-colors'
             }
