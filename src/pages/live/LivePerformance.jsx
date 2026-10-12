@@ -122,15 +122,7 @@ export default function LivePerformance() {
           swipe-gesture ref (Req 3). The one visible page is scaled to fill the
           viewport. Mirrors the gig charts performance view: placeholder entries
           render a titled empty page; real entries render through ChartPages. */}
-      <div
-        ref={surfaceRef}
-        className="flex-1 min-h-0 flex flex-col"
-        // Keep the white chart page off the top edge so it sits below the iOS
-        // status bar on a clean dark band (no shadow fading into the status bar
-        // on an installed PWA). Includes the safe-area inset (needs
-        // viewport-fit=cover) plus a small base gap.
-        style={{ paddingTop: 'calc(env(safe-area-inset-top, 0px) + 8px)' }}
-      >
+      <div ref={surfaceRef} className="flex-1 min-h-0 flex flex-col">
         {current ? (
           current.placeholder ? (
             <FitToScreen allowUpscale>
