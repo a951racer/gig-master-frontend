@@ -1,7 +1,8 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { useParams, useLocation, useNavigate } from 'react-router-dom'
 import ChartPages, { PAGE_WIDTH, PAGE_HEIGHT } from '../charts/ChartPages'
 import { useChartNavigation } from '../../hooks/useChartNavigation'
+import useSwipe from '../../hooks/useSwipe'
 import useWakeLock from '../../hooks/useWakeLock'
 import FitToScreen from '../../components/FitToScreen'
 import { buildFlatPages } from '../gigs/GigChartsPage'
@@ -71,6 +72,18 @@ export default function LivePerformance() {
 
   const exitToSetup = () => navigate(`/live/gigs/${id}`)
 
+  // Swipe gestures on the chart surface (Req 3): left = next page, right =
+  // prev, up = exit. Driven through `useChartNavigation` so end swipes clamp
+  // (Req 3.5). Called unconditionally for stable hook order; `surfaceRef` only
+  // attaches when the chart surface is mounted (the no-state fallback below
+  // returns before the ref is rendered, so it simply never binds there).
+  const surfaceRef = useRef(null)
+  useSwipe(surfaceRef, {
+    onSwipeLeft: nav.goNext,
+    onSwipeRight: nav.goPrev,
+    onSwipeUp: exitToSetup,
+  })
+
   // No forwarded charts (direct hit / refresh lost the state). Non-crashing
   // fallback with a back-to-setup action. We can't cache-load here because the
   // cache is keyed by selections, which only arrive via state (see header note)
@@ -105,32 +118,35 @@ export default function LivePerformance() {
         </p>
       )}
 
-      {/* The one visible page, scaled to fill the viewport. Mirrors the gig
-          charts performance view: placeholder entries render a titled empty
-          page; real entries render through ChartPages. */}
-      {current ? (
-        current.placeholder ? (
-          <FitToScreen allowUpscale>
-            <div
-              className="bg-white text-gray-900 shadow-lg border border-gray-300 flex flex-col"
-              style={{ width: `${PAGE_WIDTH}px`, height: `${PAGE_HEIGHT}px`, padding: '48px' }}
-            >
-              <div className="border-b border-gray-300 pb-2 mb-6 font-bold text-2xl text-gray-900">
-                {current.title} [{current.keyLabel}]
+      {/* Chart surface — fills the space above the control bar and carries the
+          swipe-gesture ref (Req 3). The one visible page is scaled to fill the
+          viewport. Mirrors the gig charts performance view: placeholder entries
+          render a titled empty page; real entries render through ChartPages. */}
+      <div ref={surfaceRef} className="flex-1 min-h-0 flex flex-col">
+        {current ? (
+          current.placeholder ? (
+            <FitToScreen allowUpscale>
+              <div
+                className="bg-white text-gray-900 shadow-lg border border-gray-300 flex flex-col"
+                style={{ width: `${PAGE_WIDTH}px`, height: `${PAGE_HEIGHT}px`, padding: '48px' }}
+              >
+                <div className="border-b border-gray-300 pb-2 mb-6 font-bold text-2xl text-gray-900">
+                  {current.title} [{current.keyLabel}]
+                </div>
+                <p className="text-gray-500 text-lg">No chart for this song</p>
               </div>
-              <p className="text-gray-500 text-lg">No chart for this song</p>
-            </div>
-          </FitToScreen>
+            </FitToScreen>
+          ) : (
+            <FitToScreen allowUpscale>
+              <ChartPages representation={current.representation} />
+            </FitToScreen>
+          )
         ) : (
-          <FitToScreen allowUpscale>
-            <ChartPages representation={current.representation} />
-          </FitToScreen>
-        )
-      ) : (
-        <div className="flex-1 flex items-center justify-center text-gray-500">
-          No pages to show
-        </div>
-      )}
+          <div className="flex-1 flex items-center justify-center text-gray-500">
+            No pages to show
+          </div>
+        )}
+      </div>
 
       {/* Slim bottom control bar — Exit on the left, navigation + position
           centered. Pinned below the chart so it never obscures the music. */}
