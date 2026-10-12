@@ -1,8 +1,8 @@
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getGig } from '../../api/gigs'
-import { allCharts } from '../../api/charts'
 import { useBand } from '../../auth/BandContext'
+import { useGigCharts } from '../../hooks/useGigCharts'
 import ChartSelection, { MODE_NUMBERS } from '../../components/ChartSelection'
 
 /**
@@ -13,17 +13,20 @@ import ChartSelection, { MODE_NUMBERS } from '../../components/ChartSelection'
  * component (identical setAll/setOne logic to GigChartsPage), then offers a
  * prominent "Start Gig" control.
  *
- * On start: request the gig's charts for the current selections and, on
- * success, enter performance mode at `/live/gigs/:id/play`, passing the loaded
- * charts payload forward via React Router location state so the (future)
- * performance view can render without re-fetching. On failure, show an error
- * and STAY on this screen (Req 2.3) — the button shows a working/disabled state
- * while the request is in flight.
+ * On start: request the gig's charts for the current selections via the shared
+ * `useGigCharts` loader and, on success, enter performance mode at
+ * `/live/gigs/:id/play`, passing the loaded charts payload forward via React
+ * Router location state so the performance view can render without re-fetching.
+ * On failure (or offline with no cache), show an error and STAY on this screen
+ * (Req 2.3, 6.4) — the button shows a working/disabled state while the request
+ * is in flight.
  *
- * NOTE (Task 13): the direct `allCharts` call below will later be swapped for a
- * `useGigCharts` loader (online + offline). The start handler is structured so
- * that swap is a one-line change — it awaits a single "load charts" promise and
- * forwards whatever payload comes back.
+ * The loader (Task 13) owns the online/offline logic: online it fetches via
+ * `allCharts` and caches the payload (Req 6.2); offline (or on a network
+ * failure) it serves the previously-cached charts (`source: 'cache'`, Req 6.3)
+ * or reports the performance isn't available offline (`source: 'unavailable'`,
+ * Req 6.4). The start handler just awaits `load(...)` and forwards whatever
+ * `{ charts, truncated }` comes back, regardless of source.
  *
  * Rendered inside LiveLayout's chromeless full-viewport wrapper (no NavBar), so
  * this screen owns its own flex column + internal scroll region, with
@@ -33,6 +36,9 @@ export default function LiveSetup() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { currentBand } = useBand()
+
+  // Shared online/offline charts loader keyed on this gig (Req 6.2–6.4).
+  const { load } = useGigCharts(id)
 
   const [gig, setGig] = useState(null)
   const [loading, setLoading] = useState(true)
@@ -113,21 +119,26 @@ export default function LiveSetup() {
     setStarting(true)
     setStartError('')
     const selections = buildSelections()
-    try {
-      // Task 13 will replace this direct call with the useGigCharts loader; the
-      // handler only needs the { charts, truncated } payload back.
-      const res = await allCharts(playlist._id, { selections })
-      const charts = res.data?.charts
-      const truncated = Boolean(res.data?.truncated)
+    // The loader never throws for the offline-miss case; it returns a result
+    // object describing what it could serve. `result.charts` is present on a
+    // network OR cache hit; `result.source === 'unavailable'` means offline
+    // with no cache. (Req 2.2, 2.3, 6.2–6.4.)
+    const result = await load(playlist._id, selections)
+
+    if (result.charts) {
       // Enter performance mode at the first page, forwarding the loaded charts
-      // via location state so the performance view can render without a refetch.
-      navigate(`/live/gigs/${id}/play`, { state: { charts, truncated, selections } })
-    } catch (err) {
-      // Req 2.3 — show the error and stay on the setup screen.
-      setStartError(err?.response?.data?.error?.message || 'Failed to load charts')
-      setStarting(false)
+      // (network or cache) via location state so the performance view renders
+      // without a refetch. On success we navigate away, so `starting` need not
+      // be reset here.
+      navigate(`/live/gigs/${id}/play`, {
+        state: { charts: result.charts, truncated: result.truncated, selections },
+      })
+      return
     }
-    // On success we navigate away, so `starting` need not be reset here.
+
+    // Failure / not available offline (Req 2.3, 6.4) — show the error and stay.
+    setStartError(result.error || 'Failed to load charts')
+    setStarting(false)
   }
 
   if (loading) {
