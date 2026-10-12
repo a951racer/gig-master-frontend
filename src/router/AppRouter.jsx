@@ -45,6 +45,7 @@ const AcceptInvitePage = lazy(() => import('../pages/invites/AcceptInvitePage'))
 const LiveLayout = lazy(() => import('../pages/live/LiveLayout'))
 const LiveGigPicker = lazy(() => import('../pages/live/LiveGigPicker'))
 const LiveSetup = lazy(() => import('../pages/live/LiveSetup'))
+const LivePerformance = lazy(() => import('../pages/live/LivePerformance'))
 
 // Sysadmin pages (self-gate on role === 'system_administrator')
 const AdminPage = lazy(() => import('../pages/admin/AdminPage'))
@@ -122,9 +123,11 @@ export default function AppRouter() {
             >
               {/* `/live` entry: the touch-first gig picker (Req 1.1–1.3). */}
               <Route index element={<LiveGigPicker />} />
-              {/* `/live/gigs/:id`: chart-type setup + Start Gig (Req 2.1–2.3).
-                  The `/play` performance route is added in Task 10. */}
+              {/* `/live/gigs/:id`: chart-type setup + Start Gig (Req 2.1–2.3). */}
               <Route path="gigs/:id" element={<LiveSetup />} />
+              {/* `/live/gigs/:id/play`: full-screen performance reader
+                  (Req 3, 4, 7). Chromeless through LiveLayout. */}
+              <Route path="gigs/:id/play" element={<LivePerformance />} />
             </Route>
 
             {/* Existing app routes — rendered WITH the NavBar shell, unchanged. */}
