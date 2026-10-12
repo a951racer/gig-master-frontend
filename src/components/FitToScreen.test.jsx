@@ -38,4 +38,18 @@ describe('FitToScreen', () => {
     // The child lives inside the scale wrapper.
     expect(scaleWrapper).toContainElement(screen.getByTestId('child'))
   })
+
+  it('accepts allowUpscale and still renders its children + scale wrapper', () => {
+    // jsdom reports 0 client dimensions, so the scale math (fit > 1) can't be
+    // exercised here — that's verified on-device. This asserts the prop is
+    // accepted and the component mounts normally with it set.
+    const { container } = render(
+      <FitToScreen allowUpscale>
+        <div data-testid="child">x</div>
+      </FitToScreen>
+    )
+    expect(screen.getByTestId('child')).toBeInTheDocument()
+    expect(container.querySelector('[style*="scale(1)"]')).not.toBeNull()
+  })
+
 })
