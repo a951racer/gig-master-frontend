@@ -110,7 +110,7 @@ export default function LivePerformance() {
           page; real entries render through ChartPages. */}
       {current ? (
         current.placeholder ? (
-          <FitToScreen>
+          <FitToScreen allowUpscale>
             <div
               className="bg-white text-gray-900 shadow-lg border border-gray-300 flex flex-col"
               style={{ width: `${PAGE_WIDTH}px`, height: `${PAGE_HEIGHT}px`, padding: '48px' }}
@@ -122,7 +122,7 @@ export default function LivePerformance() {
             </div>
           </FitToScreen>
         ) : (
-          <FitToScreen>
+          <FitToScreen allowUpscale>
             <ChartPages representation={current.representation} />
           </FitToScreen>
         )
