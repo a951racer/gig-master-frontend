@@ -227,3 +227,17 @@ describe('useSwipe — property: dispatched swipe matches the geometry rule (Des
     )
   })
 })
+
+describe('useSwipe — disables browser touch gestures (iOS scroll fix)', () => {
+  it('sets touch-action: none on the target while mounted', () => {
+    const h = makeHandlers()
+    const { surface } = renderProbe(h)
+
+    // While mounted, the surface opts out of native touch panning/zoom so a
+    // vertical swipe isn't swallowed by iOS scroll/overscroll (the root cause
+    // of swipe-up moving the page instead of exiting). The hook restores the
+    // prior inline value on cleanup; post-unmount the detached node's style is
+    // not observable in jsdom, so we assert the mounted state only.
+    expect(surface.style.touchAction).toBe('none')
+  })
+})
