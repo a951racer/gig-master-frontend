@@ -37,8 +37,17 @@ import { buildFlatPages } from '../gigs/GigChartsPage'
  * No-state fallback: if there is no location state (the user opened `/play`
  * directly or refreshed and lost the forwarded charts), render a non-crashing
  * screen offering to go back to setup rather than crashing on undefined charts.
- * (Task 13 will later let this path reload from the offline cache; for now a
- * back-to-setup fallback is the correct behavior.)
+ *
+ * Why not reload from the cache here (Task 13)? The offline chart cache is
+ * keyed by gig + the per-song `selections`, and selections are NOT in the URL —
+ * they live in location state, which is exactly what's missing on a cold direct
+ * `/play` hit. Fabricating selections (e.g. an all-Numbers default) could key a
+ * DIFFERENT cache entry than the one the performer actually loaded, so we do
+ * NOT guess them. Instead, offline replay is realized through the setup screen:
+ * reopening the gig in `/live` and tapping "Start Gig" runs `useGigCharts.load`,
+ * which serves the previously-cached charts (`source: 'cache'`) and forwards
+ * them here via state. A cold direct `/play` hit (no state) still correctly
+ * routes back to setup.
  */
 export default function LivePerformance() {
   const { id } = useParams()
@@ -63,7 +72,9 @@ export default function LivePerformance() {
   const exitToSetup = () => navigate(`/live/gigs/${id}`)
 
   // No forwarded charts (direct hit / refresh lost the state). Non-crashing
-  // fallback with a back-to-setup action (Task 13 adds the cache-load path).
+  // fallback with a back-to-setup action. We can't cache-load here because the
+  // cache is keyed by selections, which only arrive via state (see header note)
+  // — so offline replay goes back through setup → Start Gig.
   if (!state) {
     return (
       <div className="h-full flex flex-col items-center justify-center px-6 text-center">
