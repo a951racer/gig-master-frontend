@@ -1,10 +1,12 @@
-import { useState, useEffect, useRef, useLayoutEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { getGig } from '../../api/gigs'
 import { allCharts, allChartsPdf, allChartsPdfZip } from '../../api/charts'
 import { useBand } from '../../auth/BandContext'
 import ChartPages, { PAGE_WIDTH, PAGE_HEIGHT } from '../charts/ChartPages'
 import { useChartNavigation } from '../../hooks/useChartNavigation'
+import FitToScreen from '../../components/FitToScreen'
+import ChartSelection, { MODE_NUMBERS } from '../../components/ChartSelection'
 
 // Gig "generate all charts" page (#85).
 //
@@ -14,9 +16,10 @@ import { useChartNavigation } from '../../hooks/useChartNavigation'
 //   2. Performance view — the whole setlist flattened into a single page
 //      sequence, one page shown at a time scaled to fit the viewport, with
 //      next/prev/jump-to-start navigation and PDF/zip downloads.
-
-const MODE_NUMBERS = 'Numbers'
-const MODE_CHORDS = 'Chords'
+//
+// The chart-type selection UI (global All-* + per-song toggles) and the
+// MODE_NUMBERS/MODE_CHORDS constants live in the shared ChartSelection
+// component, reused here and by the Gig Master Live setup screen.
 
 // Trigger a browser download of a Blob under `filename`. Mirrors the pattern in
 // ChartViewerPage.handleDownloadPdf: object URL + temp <a> + revoke.
@@ -69,61 +72,6 @@ function buildFlatPages(charts) {
     })
   }
   return flat
-}
-
-const toggleBtn = (active) =>
-  active
-    ? 'text-sm px-3 py-1.5 rounded-lg bg-purple-700 text-white transition-colors'
-    : 'text-sm px-3 py-1.5 rounded-lg border border-purple-800/40 text-gray-300 hover:bg-purple-800/30 transition-colors'
-
-// Scale an 816×1056 page down to fit the available container (both width and
-// height), so a whole page shows at once. Measures the container and never
-// scales above 1.
-function FitToScreen({ children }) {
-  const ref = useRef(null)
-  const [scale, setScale] = useState(1)
-
-  useLayoutEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const measure = () => {
-      const w = el.clientWidth
-      const h = el.clientHeight
-      if (w > 0 && h > 0) {
-        setScale(Math.min(1, w / PAGE_WIDTH, h / PAGE_HEIGHT))
-      }
-    }
-    measure()
-    if (typeof ResizeObserver !== 'undefined') {
-      const ro = new ResizeObserver(measure)
-      ro.observe(el)
-      return () => ro.disconnect()
-    }
-    window.addEventListener('resize', measure)
-    return () => window.removeEventListener('resize', measure)
-  }, [])
-
-  return (
-    <div ref={ref} className="flex-1 w-full flex items-start justify-center overflow-hidden">
-      <div
-        style={{
-          width: `${PAGE_WIDTH * scale}px`,
-          height: `${PAGE_HEIGHT * scale}px`,
-        }}
-      >
-        <div
-          style={{
-            transform: `scale(${scale})`,
-            transformOrigin: 'top left',
-            width: `${PAGE_WIDTH}px`,
-            height: `${PAGE_HEIGHT}px`,
-          }}
-        >
-          {children}
-        </div>
-      </div>
-    </div>
-  )
 }
 
 export default function GigChartsPage() {
@@ -408,9 +356,6 @@ export default function GigChartsPage() {
   }
 
   // ---- Setup step ----
-  const allNumbers = songRows.length > 0 && songRows.every((r) => (modes[r.songId] || MODE_NUMBERS) === MODE_NUMBERS)
-  const allChords = songRows.length > 0 && songRows.every((r) => modes[r.songId] === MODE_CHORDS)
-
   return (
     <div className="max-w-2xl mx-auto px-6 py-8">
       <div className="flex items-center gap-3 mb-6">
@@ -422,55 +367,7 @@ export default function GigChartsPage() {
       <h1 className="text-2xl font-bold text-white mb-1">Generate Charts</h1>
       <p className="text-gray-400 text-sm mb-6">{playlist.name}</p>
 
-      {/* Global choice: All Numbers (default) vs All Chords. */}
-      <div className="bg-[#2a2640] border border-purple-800/30 rounded-2xl p-6 mb-6">
-        <h2 className="text-sm font-semibold text-gray-300 mb-3">Set all songs to</h2>
-        <div className="flex gap-2" role="group" aria-label="Set all songs mode">
-          <button type="button" onClick={() => setAll(MODE_NUMBERS)} className={toggleBtn(allNumbers)}>
-            All Numbers
-          </button>
-          <button type="button" onClick={() => setAll(MODE_CHORDS)} className={toggleBtn(allChords)}>
-            All Chords
-          </button>
-        </div>
-      </div>
-
-      {/* Per-song mode controls. */}
-      <div className="bg-[#2a2640] border border-purple-800/30 rounded-2xl p-6 mb-6">
-        <h2 className="text-lg font-semibold text-white mb-4">Songs</h2>
-        <ul className="space-y-3">
-          {songRows.map((row, i) => {
-            const mode = modes[row.songId] || MODE_NUMBERS
-            return (
-              <li key={row.songId} className="flex items-center gap-3 text-sm">
-                <span className="text-gray-600 w-5 text-right shrink-0">{i + 1}</span>
-                <span className="text-white font-medium">{row.title}</span>
-                {row.playedKey && (
-                  <span className="text-purple-300 font-mono text-xs font-normal">[{row.playedKey}]</span>
-                )}
-                <div className="ml-auto flex gap-2" role="group" aria-label={`Mode for ${row.title}`}>
-                  <button
-                    type="button"
-                    aria-pressed={mode === MODE_NUMBERS}
-                    onClick={() => setOne(row.songId, MODE_NUMBERS)}
-                    className={toggleBtn(mode === MODE_NUMBERS)}
-                  >
-                    Numbers
-                  </button>
-                  <button
-                    type="button"
-                    aria-pressed={mode === MODE_CHORDS}
-                    onClick={() => setOne(row.songId, MODE_CHORDS)}
-                    className={toggleBtn(mode === MODE_CHORDS)}
-                  >
-                    Chords
-                  </button>
-                </div>
-              </li>
-            )
-          })}
-        </ul>
-      </div>
+      <ChartSelection songRows={songRows} modes={modes} onSetAll={setAll} onSetOne={setOne} />
 
       {generateError && (
         <p role="alert" className="text-red-400 text-sm mb-4 bg-red-900/20 border border-red-800/40 rounded-lg px-3 py-2">
