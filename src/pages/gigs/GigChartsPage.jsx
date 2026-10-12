@@ -47,7 +47,11 @@ function safeStem(name) {
 // Each entry is { representation, title, keyLabel } where `representation` is a
 // single-page chart representation renderable by ChartPages. A null chart
 // contributes exactly one placeholder entry (flagged with `placeholder`).
-function buildFlatPages(charts) {
+//
+// Exported so Gig Master Live's performance view (LivePerformance) builds the
+// identical page sequence from the same `allCharts` payload without
+// duplicating this logic (Req 7.2 — reuse, don't reimplement).
+export function buildFlatPages(charts) {
   const flat = []
   for (const item of charts || []) {
     const chart = item?.chart
