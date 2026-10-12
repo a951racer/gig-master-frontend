@@ -6,10 +6,18 @@ import { MemoryRouter } from 'react-router-dom'
 // Mock the gigs API; listGigs is stubbed per-test.
 vi.mock('../../api/gigs', () => ({ listGigs: vi.fn() }))
 
-// Band context: a band is present (hasNoBand false) so the picker fetches gigs.
-vi.mock('../../auth/BandContext', () => ({
-  useBand: () => ({ currentBand: { id: 'b1', name: 'Band' }, hasNoBand: false }),
+// Auth context: expose a controllable logout spy. The header renders a "Log out"
+// button whose handler awaits logout() then navigates to /login, so the tests
+// drive logout() per-case (resolve or reject) via this hoisted spy.
+const { logout } = vi.hoisted(() => ({ logout: vi.fn() }))
+vi.mock('../../auth/AuthContext', () => ({
+  useAuth: () => ({ logout }),
 }))
+
+// Band context: a band is present (hasNoBand false) so the picker fetches gigs.
+// useBand is a spy set per-test; the default (a single band) means BandSwitcher
+// renders nothing, leaving the existing list/gating tests unaffected.
+vi.mock('../../auth/BandContext', () => ({ useBand: vi.fn() }))
 
 // Keep the real router, but override useNavigate with a spy we can assert on.
 const navigate = vi.fn()
@@ -20,6 +28,7 @@ vi.mock('react-router-dom', async (orig) => {
 
 import LiveGigPicker from './LiveGigPicker'
 import { listGigs } from '../../api/gigs'
+import { useBand } from '../../auth/BandContext'
 
 const renderPicker = () => render(<MemoryRouter><LiveGigPicker /></MemoryRouter>)
 
@@ -44,6 +53,16 @@ const noPlaylistGig = {
 
 beforeEach(() => {
   vi.clearAllMocks()
+  // Default: single band → BandSwitcher renders null, so the picker's list and
+  // gating behavior is unchanged for the existing tests.
+  useBand.mockReturnValue({
+    bands: [{ id: 'b1', name: 'Band' }],
+    currentBand: { id: 'b1', name: 'Band' },
+    setCurrentBand: vi.fn(),
+    hasNoBand: false,
+  })
+  // Default logout resolves; the failure test overrides this.
+  logout.mockResolvedValue(undefined)
 })
 
 describe('LiveGigPicker — gig list (Req 1.1)', () => {
@@ -115,5 +134,72 @@ describe('LiveGigPicker — chromeless (Req 3.1)', () => {
     // app NavBar links (the picker is a bare screen inside LiveLayout).
     expect(container.querySelector('nav')).toBeNull()
     expect(screen.queryByRole('navigation')).not.toBeInTheDocument()
+  })
+})
+
+describe('LiveGigPicker — logout control (Req 1.2, 1.4)', () => {
+  it('calls logout() then navigates to /login when "Log out" is clicked', async () => {
+    const user = userEvent.setup()
+    listGigs.mockResolvedValue({ data: [performableGig] })
+    renderPicker()
+
+    const logoutButton = await screen.findByRole('button', { name: /log out/i })
+    await user.click(logoutButton)
+
+    expect(logout).toHaveBeenCalledTimes(1)
+    expect(navigate).toHaveBeenCalledWith('/login')
+  })
+
+  it('still navigates to /login when the logout network call fails (Property 4)', async () => {
+    const user = userEvent.setup()
+    // The picker's handler is `try { await logout() } finally { navigate('/login') }`,
+    // so navigation is guaranteed regardless of the logout call's outcome.
+    // AuthContext.logout wraps the network call in try/catch — on a failed
+    // `logoutApi()` it swallows the error, clears local auth state, and still
+    // RESOLVES. We model that failure here: the underlying network call rejects
+    // but logout() resolves, and we still land on /login (Req 1.4, Property 4).
+    logout.mockImplementation(async () => {
+      try {
+        await Promise.reject(new Error('network down'))
+      } catch {
+        // AuthContext.logout swallows the network error and still resolves.
+      }
+    })
+    listGigs.mockResolvedValue({ data: [performableGig] })
+    renderPicker()
+
+    const logoutButton = await screen.findByRole('button', { name: /log out/i })
+    await user.click(logoutButton)
+
+    expect(logout).toHaveBeenCalledTimes(1)
+    expect(navigate).toHaveBeenCalledWith('/login')
+  })
+})
+
+describe('LiveGigPicker — band switcher visibility (Req 2.1, 2.3)', () => {
+  it('shows the "Current band" selector when the user belongs to multiple bands', async () => {
+    useBand.mockReturnValue({
+      bands: [
+        { id: 'b1', name: 'The Night Owls' },
+        { id: 'b2', name: 'Daytime Trio' },
+      ],
+      currentBand: { id: 'b1', name: 'The Night Owls' },
+      setCurrentBand: vi.fn(),
+      hasNoBand: false,
+    })
+    listGigs.mockResolvedValue({ data: [performableGig] })
+    renderPicker()
+
+    expect(await screen.findByText('Elder Care')).toBeInTheDocument()
+    expect(screen.getByLabelText('Current band')).toBeInTheDocument()
+  })
+
+  it('does NOT show the band selector when the user belongs to a single band', async () => {
+    // The default useBand mock (set in beforeEach) is a single band.
+    listGigs.mockResolvedValue({ data: [performableGig] })
+    renderPicker()
+
+    expect(await screen.findByText('Elder Care')).toBeInTheDocument()
+    expect(screen.queryByLabelText('Current band')).not.toBeInTheDocument()
   })
 })

@@ -1,8 +1,10 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { listGigs } from '../../api/gigs'
+import { useAuth } from '../../auth/AuthContext'
 import { useBand } from '../../auth/BandContext'
 import NoBandPrompt from '../bands/NoBandPrompt'
+import BandSwitcher from './BandSwitcher'
 
 /**
  * Gig Master Live — gig picker (Req 1.1, 1.2, 1.3).
@@ -32,10 +34,22 @@ function formatDate(date) {
 
 export default function LiveGigPicker() {
   const navigate = useNavigate()
+  const { logout } = useAuth()
   const { currentBand, hasNoBand } = useBand()
   const [gigs, setGigs] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
+
+  // Logout always lands the user on /login — even if the logout network call
+  // fails. `logout()` already swallows API errors and clears local auth state;
+  // the `finally` guarantees navigation regardless (Req 1.4).
+  async function handleLogout() {
+    try {
+      await logout()
+    } finally {
+      navigate('/login')
+    }
+  }
 
   useEffect(() => {
     if (hasNoBand) return
@@ -50,9 +64,21 @@ export default function LiveGigPicker() {
   return (
     // Full-height flex column: fixed heading on top, scrollable gig list below.
     <div className="h-full flex flex-col">
-      <header className="shrink-0 px-6 pt-8 pb-6">
-        <h1 className="text-3xl font-bold text-white">Gig Master Live</h1>
-        <p className="text-gray-400 text-base mt-1">Choose a gig to perform</p>
+      <header className="shrink-0 px-6 pt-8 pb-6 flex items-start justify-between gap-4">
+        <div className="min-w-0">
+          <h1 className="text-3xl font-bold text-white">Gig Master Live</h1>
+          <p className="text-gray-400 text-base mt-1">Choose a gig to perform</p>
+        </div>
+        <div className="shrink-0 flex items-center gap-3">
+          <BandSwitcher />
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="bg-[#2a2640] border border-purple-800/40 text-gray-200 rounded-lg px-4 py-2 text-base hover:bg-[#322d4d] transition-colors"
+          >
+            Log out
+          </button>
+        </div>
       </header>
 
       <div className="flex-1 min-h-0 overflow-y-auto px-6 pb-10">
