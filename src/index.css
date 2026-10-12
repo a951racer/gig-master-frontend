@@ -7,3 +7,12 @@
   --color-surface-2: #2a2640;
   --color-surface-3: #3b3660;
 }
+
+/* Dark page background so no white ever shows behind the app — notably the
+   iOS status bar / safe-area region in the installed PWA (the source of the
+   light gradient band at the top). The app shell paints its own backgrounds on
+   top of this. */
+html,
+body {
+  background-color: #16132a;
+}

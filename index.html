@@ -9,7 +9,10 @@
     <meta name="theme-color" content="#16132a" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" />
     <meta name="apple-mobile-web-app-capable" content="yes" />
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <!-- 'black' gives the status bar an opaque dark background (vs the
+         'black-translucent' overlay, which let the lighter page show through
+         at the very top as a gradient band). Pairs with theme-color #16132a. -->
+    <meta name="apple-mobile-web-app-status-bar-style" content="black" />
     <title>Gig Master</title>
     <!-- Runtime config (#8): sets window.__APP_CONFIG__ before the app bundle. -->
     <script src="/config.js"></script>
