@@ -47,6 +47,17 @@ if (enforceHttps) {
   })
 }
 
+// The service worker (and its registration shim) must never be served stale:
+// browsers re-check sw.js on each load, so a 1h static maxAge would delay a new
+// SW taking over after a deploy. Force no-cache on these so updates are picked
+// up promptly (Req 6.5). Must run BEFORE express.static sets its own headers.
+app.use((req, res, next) => {
+  if (req.path === '/sw.js' || req.path === '/registerSW.js') {
+    res.setHeader('Cache-Control', 'no-cache')
+  }
+  next()
+})
+
 // Static assets. index.html is not cached hard so new deploys are picked up;
 // hashed assets can be cached aggressively (Vite fingerprints them).
 app.use(express.static(distDir, { index: false, maxAge: '1h' }))
