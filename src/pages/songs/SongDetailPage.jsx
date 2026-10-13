@@ -1,5 +1,5 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, useParams } from 'react-router-dom'
+import { useNavigate, useParams, useLocation } from 'react-router-dom'
 import { getSong, updateSong } from '../../api/songs'
 import { listGenres } from '../../api/genres'
 import { useBand } from '../../auth/BandContext'
@@ -35,7 +35,17 @@ function ReadField({ label, children }) {
 export default function SongDetailPage() {
   const { id } = useParams()
   const navigate = useNavigate()
+  const location = useLocation()
   const { currentBand } = useBand()
+
+  // Back to wherever the user came from (song list, a setlist, a gig, etc.).
+  // React Router sets location.key to 'default' only on the very first
+  // history entry (direct link / hard refresh), where there's nothing to go
+  // back to — fall back to the songs list in that case.
+  const goBack = () => {
+    if (location.key === 'default') navigate('/songs')
+    else navigate(-1)
+  }
 
   const [song, setSong] = useState(null)
   const [genres, setGenres] = useState([])
@@ -104,7 +114,7 @@ export default function SongDetailPage() {
     <div className="max-w-2xl mx-auto px-6 py-8">
       {/* Header: back, title, edit toggle */}
       <div className="flex items-center gap-3 mb-6">
-        <button onClick={() => navigate('/songs')} className="text-gray-400 hover:text-white transition-colors text-sm">← Songs</button>
+        <button onClick={goBack} className="text-gray-400 hover:text-white transition-colors text-sm">← Back</button>
         <h1 className="text-2xl font-bold text-white flex-1 truncate">{song.title}</h1>
         {!editing && (
           <button

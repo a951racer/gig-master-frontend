@@ -114,3 +114,37 @@ describe('SongDetailPage (#83)', () => {
     expect(navigateMock).toHaveBeenCalledWith('/songs/song-1/chart/edit')
   })
 })
+
+describe('SongDetailPage — Back link (#song-detail-back)', () => {
+  it('goes back in history when there is a prior entry (e.g. arrived from a setlist)', async () => {
+    const user = userEvent.setup()
+    // Two history entries, currently on the song page: location.key is a real
+    // generated id (not 'default'), so Back uses browser history.
+    render(
+      <MemoryRouter initialEntries={['/playlists/pl1', '/songs/song-1']} initialIndex={1}>
+        <SongDetailPage />
+      </MemoryRouter>,
+    )
+    await screen.findByRole('heading', { name: 'Country Roads' })
+
+    await user.click(screen.getByRole('button', { name: /← back/i }))
+
+    expect(navigateMock).toHaveBeenCalledWith(-1)
+  })
+
+  it('falls back to the songs list on a direct hit / no history (location.key default)', async () => {
+    const user = userEvent.setup()
+    // Single default entry → location.key === 'default' → nothing to go back to,
+    // so Back routes to the songs list instead of a dead history pop.
+    render(
+      <MemoryRouter initialEntries={['/songs/song-1']}>
+        <SongDetailPage />
+      </MemoryRouter>,
+    )
+    await screen.findByRole('heading', { name: 'Country Roads' })
+
+    await user.click(screen.getByRole('button', { name: /← back/i }))
+
+    expect(navigateMock).toHaveBeenCalledWith('/songs')
+  })
+})
