@@ -143,7 +143,8 @@ function Line({ line, chordColor }) {
           <Segment key={i} chord={seg.chord} root={seg.root} quality={seg.quality} bass={seg.bass} chordColor={chordColor} chordOnly />
         ))}
         {line.repeat ? (
-          <span className="font-semibold leading-none" style={{ color: chordColor }}>{line.repeat}</span>
+          // Lyric color (not chord color) so the badge reads as an annotation.
+          <span className="font-semibold leading-none text-gray-900">{line.repeat}</span>
         ) : null}
       </div>
     )
