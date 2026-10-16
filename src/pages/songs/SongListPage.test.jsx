@@ -61,3 +61,22 @@ describe('SongListPage — slimmed actions (#83)', () => {
     expect(within(row).queryByText('C')).not.toBeInTheDocument()
   })
 })
+
+describe('SongListPage — chart indicator', () => {
+  it('shows the "Chart entered" indicator only for songs with hasChart', async () => {
+    listSongs.mockResolvedValue({
+      data: [
+        { _id: 'c1', title: 'Charted', artist: 'A', genre: null, tags: [], originalKey: 'C', hasChart: true },
+        { _id: 'c2', title: 'Uncharted', artist: 'B', genre: null, tags: [], originalKey: 'D', hasChart: false },
+      ],
+    })
+    renderPage()
+
+    const chartedRow = (await screen.findByRole('link', { name: 'Charted' })).closest('tr')
+    const unchartedRow = (await screen.findByRole('link', { name: 'Uncharted' })).closest('tr')
+
+    // The indicator is an accessible img labeled "Chart entered".
+    expect(within(chartedRow).getByRole('img', { name: /chart entered/i })).toBeInTheDocument()
+    expect(within(unchartedRow).queryByRole('img', { name: /chart entered/i })).not.toBeInTheDocument()
+  })
+})
