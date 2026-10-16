@@ -6,6 +6,7 @@ import ConfirmDialog from '../../components/ConfirmDialog'
 import { useBand } from '../../auth/BandContext'
 import NoBandPrompt from '../bands/NoBandPrompt'
 import TagChips from '../../components/TagChips'
+import ChartIndicator from '../../components/ChartIndicator'
 
 const inputCls = 'bg-[#1e1b2e] border border-purple-800/40 rounded-lg px-3 py-2 text-white placeholder-gray-500 focus:outline-none focus:ring-2 focus:ring-purple-600 text-sm'
 const selectCls = inputCls
@@ -132,7 +133,10 @@ export default function SongListPage() {
               {songs.map((song, i) => (
                 <tr key={song._id} className={`border-b border-purple-900/20 hover:bg-purple-900/10 transition-colors ${i % 2 === 0 ? '' : 'bg-[#1e1b2e]/30'}`}>
                   <td className="px-4 py-3 font-medium">
-                    <Link to={`/songs/${song._id}`} className="text-white hover:text-purple-300 transition-colors">{song.title}</Link>
+                    <span className="inline-flex items-center gap-1.5">
+                      <Link to={`/songs/${song._id}`} className="text-white hover:text-purple-300 transition-colors">{song.title}</Link>
+                      {song.hasChart && <ChartIndicator />}
+                    </span>
                   </td>
                   <td className="px-4 py-3 text-gray-300">{song.artist}</td>
                   <td className="px-4 py-3">

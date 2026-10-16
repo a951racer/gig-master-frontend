@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import ChartIndicator from '../../components/ChartIndicator'
 import { useParams, useNavigate, Link } from 'react-router-dom'
 import {
   DndContext, DragOverlay, PointerSensor, useSensor, useSensors, useDroppable,
@@ -64,13 +65,16 @@ function SortableSongItem({ entry, index, onRemove, onKeyChange }) {
         {...attributes} {...listeners}
       >{index + 1}</span>
       <div className="flex-1 min-w-0">
-        <Link
-          to={`/songs/${song._id}`}
-          onPointerDown={(e) => e.stopPropagation()}
-          className="block text-white text-sm font-medium truncate hover:text-purple-300 transition-colors"
-        >
-          {song.title}
-        </Link>
+        <div className="flex items-center gap-1.5 min-w-0">
+          <Link
+            to={`/songs/${song._id}`}
+            onPointerDown={(e) => e.stopPropagation()}
+            className="block text-white text-sm font-medium truncate hover:text-purple-300 transition-colors"
+          >
+            {song.title}
+          </Link>
+          {song.hasChart && <ChartIndicator className="shrink-0" />}
+        </div>
         <p className="text-gray-400 text-xs truncate">{song.artist}</p>
       </div>
 
