@@ -83,7 +83,7 @@ function ChordText({ chord, root, quality, bass }) {
 // so chord/lyric alignment never breaks mid-line. A trailing space is appended
 // to the CHORD so that when a chord is wider than its (often single-space)
 // lyric — e.g. a chord-only INTRO line — adjacent chords never collide.
-function Segment({ chord, root, quality, bass, lyric, chordColor }) {
+function Segment({ chord, root, quality, bass, lyric, chordColor, chordOnly = false }) {
   const hasChord = (chord && chord.length) || root
   return (
     <span className="inline-flex flex-col align-top whitespace-pre leading-none">
@@ -97,7 +97,9 @@ function Segment({ chord, root, quality, bass, lyric, chordColor }) {
           '\u00A0'
         )}
       </span>
-      <span className="text-gray-900">{lyric || '\u00A0'}</span>
+      {/* On a chord-only line there is no lyric row — omit it entirely so the
+          line collapses to a single chord row (no empty row beneath). */}
+      {chordOnly ? null : <span className="text-gray-900">{lyric || '\u00A0'}</span>}
     </span>
   )
 }
@@ -129,6 +131,22 @@ function Line({ line, chordColor }) {
   const isBlank = segments.length === 0 || segments.every((s) => !s.chord && !s.lyric)
   if (isBlank) {
     return <div className="h-4" aria-hidden="true" />
+  }
+
+  // A chord-only line (chords [+ repeat badge], no lyrics): render the chords
+  // with no lyric row, and draw the verbatim repeat badge (e.g. "x4") inline
+  // right after the last chord, on the chord row, in the chord color.
+  if (line.chordOnly) {
+    return (
+      <div className="flex items-start whitespace-pre">
+        {segments.map((seg, i) => (
+          <Segment key={i} chord={seg.chord} root={seg.root} quality={seg.quality} bass={seg.bass} chordColor={chordColor} chordOnly />
+        ))}
+        {line.repeat ? (
+          <span className="font-semibold leading-none" style={{ color: chordColor }}>{line.repeat}</span>
+        ) : null}
+      </div>
+    )
   }
 
   // One line is a single non-wrapping horizontal run of chord/lyric segments.
