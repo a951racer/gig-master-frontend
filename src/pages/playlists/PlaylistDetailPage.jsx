@@ -230,7 +230,7 @@ export default function PlaylistDetailPage() {
             </SortableContext>
           </PlaylistDropZone>
 
-          <SongCatalogPanel excludeIds={playlistSongIds} droppable />
+          <SongCatalogPanel excludeIds={playlistSongIds} currentPlaylistId={id} droppable />
         </div>
 
         <DragOverlay>
