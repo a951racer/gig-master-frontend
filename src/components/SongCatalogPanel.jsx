@@ -41,18 +41,21 @@ export default function SongCatalogPanel({ excludeIds = [], currentPlaylistId = 
   const [titleFilter, setTitleFilter] = useState('')
   const [genreFilter, setGenreFilter] = useState('')
   const [tagsFilter, setTagsFilter] = useState('')
-  const [setlistFilter, setSetlistFilter] = useState('') // a playlist id, or ''
+  // Multi-select setlist filter: a Set of selected playlist ids. A song matches
+  // the setlist criterion if it is in the UNION of the selected setlists (in at
+  // least one of them).
+  const [selectedSetlistIds, setSelectedSetlistIds] = useState(() => new Set())
   const [invert, setInvert] = useState(false) // false = show matches, true = hide matches
   const [sortField, setSortField] = useState('title')
   const [sortDir, setSortDir] = useState('asc')
 
-  // Song ids belonging to the selected OTHER setlist (loaded lazily when a
-  // setlist is chosen). Empty set when no setlist filter is active.
-  const [setlistSongIds, setSetlistSongIds] = useState(() => new Set())
+  // Per-setlist song-id lists, keyed by playlist id, loaded lazily as setlists
+  // are selected and cached so re-selecting doesn't refetch.
+  const [setlistSongs, setSetlistSongs] = useState({}) // { [playlistId]: string[] }
 
   useEffect(() => { listGenres().then(res => setGenres(res.data)).catch(() => {}) }, [currentBand?.id])
 
-  // Setlist dropdown options: every band setlist EXCEPT the one being edited.
+  // Setlist checkbox options: every band setlist EXCEPT the one being edited.
   useEffect(() => {
     listPlaylists()
       .then(res => setPlaylists((res.data || []).filter(p => String(p._id) !== String(currentPlaylistId))))
@@ -64,35 +67,62 @@ export default function SongCatalogPanel({ excludeIds = [], currentPlaylistId = 
     listSongs().then(res => setAllSongs(res.data || [])).catch(() => {})
   }, [currentBand?.id])
 
-  // When a setlist filter is chosen, lazily load that setlist's song ids.
+  // Reset selections + cache when the band changes.
   useEffect(() => {
-    if (!setlistFilter) {
-      setSetlistSongIds(new Set())
-      return
-    }
+    setSelectedSetlistIds(new Set())
+    setSetlistSongs({})
+  }, [currentBand?.id])
+
+  // Lazily load the song ids for any newly-selected setlist not yet cached.
+  useEffect(() => {
     let active = true
-    getPlaylist(setlistFilter)
-      .then(res => {
-        if (!active) return
-        const ids = (res.data?.songs || [])
-          .map(e => e?.song?._id ?? e?.song)
-          .filter(Boolean)
-          .map(String)
-        setSetlistSongIds(new Set(ids))
+    const missing = [...selectedSetlistIds].filter(id => !(id in setlistSongs))
+    if (missing.length === 0) return
+    Promise.all(
+      missing.map(id =>
+        getPlaylist(id)
+          .then(res => [id, (res.data?.songs || []).map(e => String(e?.song?._id ?? e?.song)).filter(Boolean)])
+          .catch(() => [id, []])
+      )
+    ).then(pairs => {
+      if (!active) return
+      setSetlistSongs(prev => {
+        const next = { ...prev }
+        for (const [id, ids] of pairs) next[id] = ids
+        return next
       })
-      .catch(() => { if (active) setSetlistSongIds(new Set()) })
+    })
     return () => { active = false }
-  }, [setlistFilter])
+  }, [selectedSetlistIds, setlistSongs])
+
+  const toggleSetlist = (id) => {
+    setSelectedSetlistIds(prev => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
 
   const excludeSet = useMemo(() => new Set((excludeIds || []).map(String)), [excludeIds])
+
+  // Union of song ids across all SELECTED setlists (whose data has loaded).
+  const unionSetlistIds = useMemo(() => {
+    const u = new Set()
+    for (const id of selectedSetlistIds) {
+      for (const sid of (setlistSongs[id] || [])) u.add(sid)
+    }
+    return u
+  }, [selectedSetlistIds, setlistSongs])
 
   const visibleSongs = useMemo(() => {
     const title = titleFilter.trim().toLowerCase()
     const wantTags = tagsFilter.split(',').map(t => t.trim().toLowerCase()).filter(Boolean)
+    const setlistActive = selectedSetlistIds.size > 0
 
     // Whether ANY filter is active. With no active filter, show everything
     // (the invert toggle has nothing to invert).
-    const hasFilter = Boolean(title || genreFilter || wantTags.length || setlistFilter)
+    const hasFilter = Boolean(title || genreFilter || wantTags.length || setlistActive)
 
     const matches = (s) => {
       if (title && !(s.title || '').toLowerCase().includes(title)) return false
@@ -101,7 +131,9 @@ export default function SongCatalogPanel({ excludeIds = [], currentPlaylistId = 
         const songTags = (s.tags || []).map(t => String(t).toLowerCase())
         if (!wantTags.every(t => songTags.includes(t))) return false
       }
-      if (setlistFilter && !setlistSongIds.has(String(s._id))) return false
+      // Setlist criterion: the song is in the UNION of the selected setlists
+      // (in at least one of them).
+      if (setlistActive && !unionSetlistIds.has(String(s._id))) return false
       return true
     }
 
@@ -119,7 +151,7 @@ export default function SongCatalogPanel({ excludeIds = [], currentPlaylistId = 
       const bVal = sortField === 'genre' ? (b.genre?.name || '') : (b[sortField] || '')
       return sortDir === 'asc' ? aVal.localeCompare(bVal) : bVal.localeCompare(aVal)
     })
-  }, [allSongs, titleFilter, genreFilter, tagsFilter, setlistFilter, setlistSongIds, invert, sortField, sortDir, excludeSet])
+  }, [allSongs, titleFilter, genreFilter, tagsFilter, selectedSetlistIds, unionSetlistIds, invert, sortField, sortDir, excludeSet])
 
   return (
     <div
@@ -134,10 +166,29 @@ export default function SongCatalogPanel({ excludeIds = [], currentPlaylistId = 
           {genres.map(g => <option key={g._id} value={g._id}>{g.name}</option>)}
         </select>
         <input className={inputCls} placeholder="Tags" value={tagsFilter} onChange={e => setTagsFilter(e.target.value)} />
-        <select className={selectCls} value={setlistFilter} onChange={e => setSetlistFilter(e.target.value)} aria-label="Filter by setlist">
-          <option value="">All setlists</option>
-          {playlists.map(p => <option key={p._id} value={p._id}>{p.name}</option>)}
-        </select>
+
+        {/* Multi-select setlist filter: a song matches if it is in the UNION of
+            the checked setlists (at least one). All band setlists except the
+            one being edited are listed. */}
+        {playlists.length > 0 && (
+          <fieldset className="border border-purple-800/40 rounded-lg px-2 py-1.5" aria-label="Filter by setlists">
+            <legend className="text-[10px] uppercase tracking-wide text-gray-500 px-1">Setlists</legend>
+            <div className="max-h-28 overflow-y-auto space-y-1">
+              {playlists.map(p => (
+                <label key={p._id} className="flex items-center gap-2 text-xs text-gray-300 cursor-pointer select-none">
+                  <input
+                    type="checkbox"
+                    className="accent-purple-600 shrink-0"
+                    checked={selectedSetlistIds.has(String(p._id))}
+                    onChange={() => toggleSetlist(String(p._id))}
+                  />
+                  <span className="truncate">{p.name}</span>
+                </label>
+              ))}
+            </div>
+          </fieldset>
+        )}
+
         <label className="flex items-center gap-2 text-xs text-gray-300 px-0.5 py-0.5 cursor-pointer select-none">
           <input type="checkbox" checked={invert} onChange={e => setInvert(e.target.checked)} className="accent-purple-600" />
           Hide songs matching the filters
